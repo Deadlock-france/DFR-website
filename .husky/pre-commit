@@ -1,0 +1,12 @@
+#!/bin/sh
+set -e
+
+echo "→ Tests unitaires"
+npm run test:run
+
+# Le build typecheck l'ensemble du projet et fait échouer le commit sur une
+# erreur que les tests seuls ne voient pas (page cassée, import manquant).
+echo "→ Build de production"
+npm run build
+
+echo "✓ Tests et build OK"
