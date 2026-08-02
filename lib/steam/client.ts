@@ -10,11 +10,17 @@ import {
 } from "./events";
 import { STEAM_NEWS_API, type SteamNewsItem, type SteamNewsResponse } from "./types";
 
-// Filtre appliqué par Steam : plus fiable que le tag "patchnotes" de chaque
-// article, que Valve retire parfois lors d'une re-modération.
-const PATCH_NOTES_TAG = "patchnotes";
+/** Annonces officielles Valve / communauté Steam (hors presse externe). */
+export const STEAM_COMMUNITY_FEED = "steam_community_announcements";
 
 export const STEAM_NEWS_CACHE_TAG = "steam-patch-notes";
+
+/** Steam mélange presse + Valve : on demande plus large, puis on coupe. */
+const STEAM_NEWS_FETCH_MULTIPLIER = 3;
+
+export function isValveCommunityAnnouncement(item: SteamNewsItem): boolean {
+  return item.feedname === STEAM_COMMUNITY_FEED;
+}
 
 function normalizeSteamItem(item: SteamNewsItem): SteamNewsItem {
   return {
@@ -24,8 +30,16 @@ function normalizeSteamItem(item: SteamNewsItem): SteamNewsItem {
   };
 }
 
+function captureOriginalItem(item: SteamNewsItem): NonNullable<SteamNewsItem["original"]> {
+  return {
+    title: unescapeSteamBrackets(item.title),
+    contents: unescapeSteamBrackets(item.contents),
+  };
+}
+
 async function translateItemWithDeepl(
   item: SteamNewsItem,
+  original: NonNullable<SteamNewsItem["original"]>,
 ): Promise<SteamNewsItem> {
   const [title, contents] = await Promise.all([
     translateToFrench(item.title),
@@ -33,7 +47,7 @@ async function translateItemWithDeepl(
   ]);
 
   if (!title && !contents) {
-    return normalizeSteamItem({ ...item, translation_source: "en" });
+    return normalizeSteamItem({ ...item, translation_source: "en", original });
   }
 
   return normalizeSteamItem({
@@ -41,6 +55,7 @@ async function translateItemWithDeepl(
     title: title ?? item.title,
     contents: contents ?? item.contents,
     translation_source: "deepl",
+    original,
   });
 }
 
@@ -62,6 +77,7 @@ async function localizePatchNotes(
 
   return Promise.all(
     items.map(async (item) => {
+      const original = captureOriginalItem(item);
       const event = eventsByPosttime.get(item.date);
       const announcementGid = event?.announcement_body?.gid;
 
@@ -78,6 +94,7 @@ async function localizePatchNotes(
               title: french.headline.trim(),
               contents: french.body,
               translation_source: "steam" as const,
+              original,
             });
           }
         } catch (error) {
@@ -88,7 +105,7 @@ async function localizePatchNotes(
         }
       }
 
-      return translateItemWithDeepl(item);
+      return translateItemWithDeepl(item, original);
     }),
   );
 }
@@ -103,8 +120,12 @@ export async function getSteamNews(
 
   const url = new URL(STEAM_NEWS_API);
   url.searchParams.set("appid", String(appId));
-  url.searchParams.set("count", String(count));
-  url.searchParams.set("tags", PATCH_NOTES_TAG);
+  // Pas de filtre `tags=patchnotes` : Valve publie parfois des updates
+  // (ex. Matchmaking) sans ce tag. On garde ensuite uniquement le feed Steam.
+  url.searchParams.set(
+    "count",
+    String(Math.max(count * STEAM_NEWS_FETCH_MULTIPLIER, count)),
+  );
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10000);
@@ -119,7 +140,9 @@ export async function getSteamNews(
     }
 
     const data = (await response.json()) as SteamNewsResponse;
-    const items = data.appnews?.newsitems ?? [];
+    const items = (data.appnews?.newsitems ?? [])
+      .filter(isValveCommunityAnnouncement)
+      .slice(0, count);
 
     return localizePatchNotes(items, appId);
   } finally {

@@ -1,66 +1,91 @@
 import { bbcodeToHtml } from "./bbcode-to-html";
 import { unescapeSteamBrackets } from "@/lib/steam/text";
 
-function stripHtmlTags(html: string): string {
-  return html.replace(/<[^>]+>/g, "").trim();
+/**
+ * Affinage post-BBCode / HTML Steam : titres de section, images cadrées,
+ * un seul <br> d'affilée.
+ */
+function polishPatchNotesHtml(html: string): string {
+  let result = html;
+
+  // Steam HTML officiel utilise souvent <b> plutôt que <strong>.
+  result = result.replace(/<b>/gi, "<strong>").replace(/<\/b>/gi, "</strong>");
+
+  // [p][b]Titre[/b][/p] → <p><strong>Titre</strong></p>
+  result = result.replace(
+    /<p>\s*<strong>([^<]+)<\/strong>\s*<\/p>/gi,
+    '<h3 class="patch-notes-section">$1</h3>',
+  );
+
+  // [b]Titre[/b] seul sur sa ligne → vrai titre de section (pas du gras inline).
+  result = result.replace(
+    /(?:^|(?:<br\s*\/?>))\s*<strong>([^<]+)<\/strong>\s*(?=<br\s*\/?>|$)/gi,
+    (_match, title: string, offset: number) => {
+      const heading = `<h3 class="patch-notes-section">${title.trim()}</h3>`;
+      return offset === 0 ? heading : `<br>${heading}`;
+    },
+  );
+
+  // Lignes type "[ General ]" / "[ Héros ]" (souvent non grasées par Valve).
+  result = result.replace(
+    /(?:^|(?:<br\s*\/?>))\s*(\[[^\]\n]{1,80}\])\s*(?=<br\s*\/?>|$)/g,
+    (_match, title: string, offset: number) => {
+      const heading = `<h3 class="patch-notes-section">${title.trim()}</h3>`;
+      return offset === 0 ? heading : `<br>${heading}`;
+    },
+  );
+
+  result = result.replace(/<p>\s*<\/p>/gi, "");
+
+  result = result.replace(
+    /<img\b([^>]*)>/gi,
+    '<figure class="patch-notes-figure"><img$1></figure>',
+  );
+
+  // Un seul saut de ligne suffit pour l'aération visuelle.
+  result = result.replace(/(?:<br\s*\/?>\s*){2,}/gi, "<br>");
+  result = result.replace(/^(?:<br\s*\/?>)+|(?:<br\s*\/?>)+$/gi, "");
+
+  return result;
 }
 
-function decodeHtmlEntities(text: string): string {
-  return text
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&nbsp;/g, " ");
+/**
+ * DeepL peut réintroduire des blancs à l'intérieur des balises [b]…[/b] :
+ * on les aplatit avant la conversion HTML pour que le polish reconnaisse
+ * les titres de section.
+ */
+function normalizeBbcodeInlineTags(content: string): string {
+  return content.replace(
+    /\[(b|i|u|s|h[1-4])\]([\s\S]*?)\[\/\1\]/gi,
+    (_match, tag: string, inner: string) => {
+      const trimmed = inner.replace(/^\s+|\s+$/g, "").replace(/\s*\n\s*/g, " ");
+      return `[${tag}]${trimmed}[/${tag}]`;
+    },
+  );
 }
 
 function formatPatchNotesContent(content: string): string {
-    content = unescapeSteamBrackets(content);
-    // CAS 1 : Si c'est du HTML (ex: <p>, <img>)
-    let result = "";
-    if (/<[a-z][\s\S]*>/i.test(content)) {
-      const paragraphs = [...content.matchAll(/<p[^>]*>([\s\S]*?)<\/p>/gi)]
-        .map((match) => decodeHtmlEntities(stripHtmlTags(match[1])))
-        .filter((text) => text.length > 0);
+  content = unescapeSteamBrackets(content);
 
-      if (paragraphs.length > 0) {
-        result = paragraphs.join("\n\n");
-      }
+  // HTML déjà fourni par Steam (presse / Events FR) sans BBCode restant.
+  if (/<[a-z][\s\S]*>/i.test(content) && !/\[[a-z0-9]/i.test(content)) {
+    return polishPatchNotesHtml(content);
+  }
 
-      result = decodeHtmlEntities(stripHtmlTags(content));
-    }
-  
-    // CAS 2 : Si c'est du BBCode Steam (ex: [h3], [i], [img], [url])
-    if (/\[(i|h[1-6]|img|url|b|u)\]/i.test(content)) {
-      result = content
-        // Supprime les images [img]...[/img]
-        .replace(/\[img\][\s\S]*?\[\/img\]/gi, "")
-        // Convertit les liens [url=link]texte[/url] en simple "texte"
-        .replace(/\[url=[^\]]+\](.*?)\[\/url\]/gi, "$1")
-        // Nettoie les balises de style/titres [h3], [i], [b], etc.
-        .replace(/\[\/?(h[1-6]|i|b|u|code|quote|list|\*)\]/gi, "")
-        // Supprime les lignes vides multiples générées par la suppression d'images
-        .replace(/\n\s*\n/g, "\n\n")
-        .trim();
-    }
-    // CAS 3 : Si c'est le format personnalisé avec [p]
-    result = bbcodeToHtml(content)
-    return result
+  return polishPatchNotesHtml(bbcodeToHtml(normalizeBbcodeInlineTags(content)));
 }
-  
 
 function formatShortNewsDate(timestamp: number): string {
-    return new Intl.DateTimeFormat("fr-FR", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    }).format(new Date(timestamp * 1000));
-  }
-  
-  function formatPatchNotesTitle(title: string): string {
-    return unescapeSteamBrackets(title).split(" - ")[0];
-  }
+  return new Intl.DateTimeFormat("fr-FR", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(new Date(timestamp * 1000));
+}
+
+function formatPatchNotesTitle(title: string): string {
+  return unescapeSteamBrackets(title).split(" - ")[0];
+}
 
 function formatNewsDate(timestamp: number): string {
   return new Intl.DateTimeFormat("fr-FR", {
@@ -70,9 +95,9 @@ function formatNewsDate(timestamp: number): string {
   }).format(new Date(timestamp * 1000));
 }
 
-  export {
-    formatPatchNotesContent,
-    formatShortNewsDate,
-    formatPatchNotesTitle,
-    formatNewsDate,
-  };
+export {
+  formatPatchNotesContent,
+  formatShortNewsDate,
+  formatPatchNotesTitle,
+  formatNewsDate,
+};

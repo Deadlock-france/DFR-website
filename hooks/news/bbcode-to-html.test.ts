@@ -119,6 +119,19 @@ describe("bbcodeToHtml", () => {
       );
     });
 
+    it("convertit [img] même avec des sauts de ligne autour de l'URL", () => {
+      expect(
+        bbcodeToHtml(
+          "[img]\nhttps://clan.steamstatic.com/images/45164767/f6a6d5724077ee5ea7b3b3701f4af907c9517df4.png[/img]",
+        ),
+      ).toBe(
+        '<img src="https://clan.steamstatic.com/images/45164767/f6a6d5724077ee5ea7b3b3701f4af907c9517df4.png">',
+      );
+      expect(bbcodeToHtml("[img width=600]\nhttps://x.fr/i.png\n[/img]")).toBe(
+        '<img src="https://x.fr/i.png" width="600">',
+      );
+    });
+
     it("transforme [youtube] en iframe d'embed", () => {
       expect(bbcodeToHtml("[youtube]dQw4w9WgXcQ[/youtube]")).toBe(
         '<iframe frameborder="0" allowfullscreen="true" src="https://www.youtube.com/embed/dQw4w9WgXcQ?showinfo=0"></iframe>',

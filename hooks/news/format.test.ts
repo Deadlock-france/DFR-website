@@ -90,10 +90,60 @@ describe("formatPatchNotesContent", () => {
     );
   });
 
-  it("résout les images Steam vers une URL absolue", () => {
+  it("promouvoit un [b] seul sur sa ligne en titre de section", () => {
+    expect(formatPatchNotesContent("[b]Général[/b]\n- fix matchmaking")).toBe(
+      '<h3 class="patch-notes-section">Général</h3><br>- fix matchmaking',
+    );
+  });
+
+  it("promouvoit aussi les titres au format Steam [p][b]…[/b][/p]", () => {
+    expect(
+      formatPatchNotesContent("[p][b]\\[ General ][/b][/p][p]- fix stamina[/p]"),
+    ).toBe(
+      '<h3 class="patch-notes-section">[ General ]</h3><p>- fix stamina</p>',
+    );
+  });
+
+  it("promouvoit les titres HTML Steam FR (<p><b>…</b></p>)", () => {
+    expect(
+      formatPatchNotesContent("<p><b>MODE STANDARD</b></p><p>Description</p>"),
+    ).toBe(
+      '<h3 class="patch-notes-section">MODE STANDARD</h3><p>Description</p>',
+    );
+  });
+
+  it("promouvoit les lignes [ Section ] en titres", () => {
+    expect(formatPatchNotesContent("[ Heroes ]\nAbrams buffed")).toBe(
+      '<h3 class="patch-notes-section">[ Heroes ]</h3><br>Abrams buffed',
+    );
+  });
+
+  it("laisse le gras inline intact", () => {
+    expect(formatPatchNotesContent("Buff de [b]Abrams[/b] en lane")).toBe(
+      "Buff de <strong>Abrams</strong> en lane",
+    );
+  });
+
+  it("réduit les <br> consécutifs à un seul", () => {
+    expect(formatPatchNotesContent("une\n\n\ndeux")).toBe("une<br>deux");
+  });
+
+  it("résout les images Steam vers une URL absolue cadrée", () => {
     expect(
       formatPatchNotesContent("[img]{STEAM_CLAN_IMAGE}/1/patch.png[/img]"),
-    ).toBe('<img src="https://clan.steamstatic.com/images/1/patch.png">');
+    ).toBe(
+      '<figure class="patch-notes-figure"><img src="https://clan.steamstatic.com/images/1/patch.png"></figure>',
+    );
+  });
+
+  it("convertit les [img] même avec un saut de ligne autour de l'URL", () => {
+    expect(
+      formatPatchNotesContent(
+        "[img]\nhttps://clan.steamstatic.com/images/45164767/f6a6d5724077ee5ea7b3b3701f4af907c9517df4.png[/img]",
+      ),
+    ).toBe(
+      '<figure class="patch-notes-figure"><img src="https://clan.steamstatic.com/images/45164767/f6a6d5724077ee5ea7b3b3701f4af907c9517df4.png"></figure>',
+    );
   });
 
   it("convertit les liens en ancres cliquables", () => {

@@ -2,9 +2,29 @@ import { unescapeSteamBrackets } from "@/lib/steam/text";
 
 const DEEPL_FREE_API = "https://api-free.deepl.com/v2/translate";
 
+/**
+ * Termes de jargon Deadlock / Valve à laisser en anglais.
+ * Protégés via les mêmes marqueurs XML `ignore_tags` que le BBCode.
+ */
+const DO_NOT_TRANSLATE = [
+  "matchmaking",
+  // Plus long d'abord : sinon \bDoorman\b mangerait « The Doorman ».
+  "The Doorman",
+  "Doorman",
+] as const;
+
+const DO_NOT_TRANSLATE_PATTERN = new RegExp(
+  `\\b(${DO_NOT_TRANSLATE.map(escapeRegExp).join("|")})\\b`,
+  "gi",
+);
+
 type DeepLTranslateResponse = {
   translations: Array<{ detected_source_language: string; text: string }>;
 };
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 
 /**
  * DeepL v2 parse le payload en XML strict : un `&` ou `<` non échappé dans un
@@ -24,20 +44,36 @@ function unescapeXmlText(text: string): string {
     .replace(/&amp;/g, "&");
 }
 
+function pushPlaceholder(tags: string[], value: string): string {
+  const index = tags.length;
+  tags.push(value);
+  return `\0${index}\0`;
+}
+
 /**
- * Protège les balises BBCode Steam pendant la traduction DeepL : elles sont
- * remplacées par des marqueurs XML que DeepL laisse intact avec tag_handling.
+ * Protège les balises BBCode Steam et le jargon non traduisible pendant la
+ * traduction DeepL : remplacés par des marqueurs XML ignorés via tag_handling.
  *
  * Ordre volontaire : d'abord des placeholders hors XML, puis échappement du
  * texte, puis insertion des marqueurs — sinon on échapperait les `<x …>`.
  */
 function protectBbcode(text: string): { protectedText: string; tags: string[] } {
   const tags: string[] = [];
-  const withPlaceholders = unescapeSteamBrackets(text).replace(/\[[^\]]+\]/g, (tag) => {
-    const index = tags.length;
-    tags.push(tag);
-    return `\0${index}\0`;
-  });
+
+  let withPlaceholders = unescapeSteamBrackets(text).replace(
+    /\[[^\]]+\]/g,
+    (tag) => pushPlaceholder(tags, tag),
+  );
+
+  // DeepL fusionne sinon les \n qui séparent titres [b]…[/b] et paragraphes :
+  // sans ça, le polish FR perd la structure que l'EN conserve.
+  withPlaceholders = withPlaceholders.replace(/\r\n|\n|\r/g, (nl) =>
+    pushPlaceholder(tags, nl === "\r\n" ? "\n" : nl === "\r" ? "\n" : nl),
+  );
+
+  withPlaceholders = withPlaceholders.replace(DO_NOT_TRANSLATE_PATTERN, (term) =>
+    pushPlaceholder(tags, term),
+  );
 
   const protectedText = escapeXmlText(withPlaceholders).replace(
     /\0(\d+)\0/g,
@@ -91,6 +127,7 @@ export async function translateToFrench(
         // le comportement (XML strict) soit le même partout.
         tag_handling_version: "v2",
         ignore_tags: ["x"],
+        preserve_formatting: true,
       }),
     });
 

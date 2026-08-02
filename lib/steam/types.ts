@@ -15,6 +15,11 @@ export interface SteamNewsItem {
   tags?: string[];
   /** Origine de la traduction appliquée au titre et au contenu. */
   translation_source?: TranslationSource;
+  /** Texte anglais d'origine (ISteamNews) avant localisation FR. */
+  original?: {
+    title: string;
+    contents: string;
+  };
 }
 
 export const STEAM_NEWS_API =

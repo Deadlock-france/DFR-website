@@ -20,7 +20,13 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/shadcn/tooltip";
-import { navDockClassName, navDockStyle, navIconButtonClassName } from "@/lib/layout/nav-dock";
+import {
+  NAV_WIDTH_TRANSITION,
+  navDockClassName,
+  navDockStyle,
+  navIconButtonClassName,
+  navRevealLabelTransition,
+} from "@/lib/layout/nav-dock";
 import {
   getSidebarOpenServerSnapshot,
   isActivePath,
@@ -39,8 +45,6 @@ const NAV_ITEMS: ReadonlyArray<{ href: string; label: string; icon: LucideIcon }
   //{ href: "/items", label: "Items", icon: ShoppingBag },
   //{ href: "/unban", label: "Déban", icon: Gavel },
 ];
-
-const NAV_WIDTH_TRANSITION = "0.28s cubic-bezier(0.22, 1, 0.36, 1)";
 
 function NavDock({
   children,
@@ -196,10 +200,7 @@ export default function AppSidebar() {
                   flex: collapsed ? "0 0 0px" : "1 1 auto",
                   maxWidth: collapsed ? 0 : undefined,
                   opacity: collapsed ? 0 : 1,
-                  transition: animated
-                    ? `max-width ${NAV_WIDTH_TRANSITION}, opacity 0.2s ease, flex 0.28s ease`
-                    : undefined,
-                  transitionDelay: collapsed ? "0s" : "0.08s",
+                  ...navRevealLabelTransition(animated, collapsed),
                   pointerEvents: collapsed ? "none" : "auto",
                 }}
               >

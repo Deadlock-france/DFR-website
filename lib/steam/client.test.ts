@@ -127,32 +127,74 @@ function newsRequestUrl(): URL {
 
 describe("getSteamNews", () => {
   describe("requête Steam", () => {
-    it("ne demande que les patch notes", async () => {
+    it("ne filtre pas par tag patchnotes (annonces Valve sans tag)", async () => {
       stubNetwork({});
 
       await getSteamNews();
 
-      expect(newsRequestUrl().searchParams.get("tags")).toBe("patchnotes");
+      expect(newsRequestUrl().searchParams.get("tags")).toBeNull();
     });
 
-    it("cible Deadlock et 50 articles par défaut", async () => {
+    it("demande plus d'articles que le count pour compenser la presse externe", async () => {
+      stubNetwork({});
+
+      await getSteamNews(DEADLOCK_APP_ID, 50);
+
+      expect(newsRequestUrl().searchParams.get("count")).toBe("150");
+    });
+
+    it("cible Deadlock par défaut", async () => {
       stubNetwork({});
 
       await getSteamNews();
 
-      const url = newsRequestUrl();
-      expect(url.searchParams.get("appid")).toBe("1422450");
-      expect(url.searchParams.get("count")).toBe("50");
+      expect(newsRequestUrl().searchParams.get("appid")).toBe("1422450");
     });
 
-    it("respecte l'appid et le nombre fournis", async () => {
+    it("respecte l'appid fourni", async () => {
       stubNetwork({});
 
       await getSteamNews(570, 5);
 
-      const url = newsRequestUrl();
-      expect(url.searchParams.get("appid")).toBe("570");
-      expect(url.searchParams.get("count")).toBe("5");
+      expect(newsRequestUrl().searchParams.get("appid")).toBe("570");
+      expect(newsRequestUrl().searchParams.get("count")).toBe("15");
+    });
+
+    it("garde les annonces Steam même sans tag patchnotes et ignore la presse", async () => {
+      stubNetwork({
+        news: {
+          appnews: {
+            appid: DEADLOCK_APP_ID,
+            newsitems: [
+              newsItem({
+                gid: "1839676055886206",
+                title: "Matchmaking Update",
+                tags: undefined,
+              }),
+              newsItem({
+                gid: "press-1",
+                title: "External article",
+                feedname: "PC Gamer",
+              }),
+              newsItem({
+                gid: "patch-1",
+                title: "Minor Update",
+                tags: ["patchnotes"],
+              }),
+            ],
+            count: 3,
+          },
+        },
+        events: { success: 1, events: [] },
+        deepl: (text) => `FR:${text}`,
+      });
+
+      const items = await getSteamNews();
+
+      expect(items.map((item) => item.gid)).toEqual([
+        "1839676055886206",
+        "patch-1",
+      ]);
     });
 
     it("marque l'entrée de cache avec le tag de revalidation", async () => {
@@ -196,6 +238,10 @@ describe("getSteamNews", () => {
 
       expect(item.translation_source).toBe("steam");
       expect(item.contents).toBe("[b]Héros[/b] rééquilibrés");
+      expect(item.original).toEqual({
+        title: "Update - July 26",
+        contents: "[b]Heroes[/b] rebalanced",
+      });
     });
 
     it("nettoie les espaces autour du titre fourni par Valve", async () => {

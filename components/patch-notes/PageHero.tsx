@@ -10,7 +10,7 @@ interface PageHeroProps {
 
 export default function PageHero({ title, description, mb = 5 }: PageHeroProps) {
   return (
-    <div className="relative" style={{ marginBottom: mb * 8 }}>
+    <div className="relative p-4 sm:p-5" style={{ marginBottom: mb }}>
       
       <div className="relative z-1 flex flex-col gap-1.5 mt-10">
         <FadeIn>

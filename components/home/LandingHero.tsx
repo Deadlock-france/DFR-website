@@ -8,7 +8,7 @@ import { buttonVariants } from "@/components/shadcn/button";
 import { easeOut } from "@/lib/motion/presets";
 import { cn } from "@/lib/utils";
 
-const DISCORD_INVITE_URL = "https://discord.gg/deadlock";
+const DISCORD_INVITE_URL = "https://discord.gg/g7e6vn6US9";
 /** Artwork officiel Steam — format paysage, idéal en fond de hero */
 const HERO_IMAGE =
   "/assets/header_heroes.png";
@@ -30,7 +30,7 @@ export default function LandingHero() {
   const reduceMotion = useReducedMotion();
 
   const content = (
-    <div className="relative z-1 mx-auto flex min-h-[min(72vh,640px)] w-full max-w-[1200px] flex-col justify-center px-4 py-12 sm:px-6 lg:px-8">
+    <div className="relative z-1 mx-auto flex min-h-[min(72vh,640px)] w-full max-w-1500px flex-col justify-center px-4 py-12 sm:px-6 lg:px-8">
       <div className="max-w-xl">
         <h1
           className="font-colus bg-clip-text text-4xl font-normal tracking-[-0.02em] sm:text-5xl lg:text-6xl lg:leading-[1.05]"
@@ -51,7 +51,7 @@ export default function LandingHero() {
             )}
             style={{ backgroundColor: "#4A9B7F"}}
           >
-            Voir les actus
+            Voir les dernières patch notes
             <ArrowRight className="size-4" />
           </AppLink>
 

@@ -9,10 +9,9 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/shadcn/tooltip";
+import { navRevealLabelTransition } from "@/lib/layout/nav-dock";
 import { cn } from "@/lib/utils";
 import { useReducedMotion } from "motion/react";
-
-const NAV_LABEL_TRANSITION = "0.28s cubic-bezier(0.22, 1, 0.36, 1)";
 
 interface NavLinkProps {
   href: string;
@@ -94,10 +93,7 @@ export default function NavLink({
         flex: collapsed ? "0 0 0px" : "1 1 auto",
         maxWidth: collapsed ? 0 : 180,
         opacity: collapsed ? 0 : 1,
-        transition: animateLabel
-          ? `max-width ${NAV_LABEL_TRANSITION}, opacity 0.2s ease, flex 0.28s ease`
-          : undefined,
-        transitionDelay: collapsed ? "0s" : "0.06s",
+        ...navRevealLabelTransition(animateLabel, collapsed, "0.06s"),
         pointerEvents: collapsed ? "none" : "auto",
       }}
     >

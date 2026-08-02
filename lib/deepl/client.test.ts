@@ -39,6 +39,7 @@ function requestBody(callIndex = 0) {
     tag_handling: string;
     tag_handling_version: string;
     ignore_tags: string[];
+    preserve_formatting: boolean;
   };
 }
 
@@ -95,6 +96,7 @@ describe("translateToFrench", () => {
       expect(body.tag_handling).toBe("xml");
       expect(body.tag_handling_version).toBe("v2");
       expect(body.ignore_tags).toEqual(["x"]);
+      expect(body.preserve_formatting).toBe(true);
     });
 
     it("passe un signal d'abandon", async () => {
@@ -152,6 +154,43 @@ describe("translateToFrench", () => {
       );
       expect(result).toBe("Mise à jour - [ General ] [ Items ] [ Heroes ]");
       expect(result).not.toContain("\\[");
+    });
+
+    it("ne soumet pas le jargon protégé à la traduction (ex. matchmaking)", async () => {
+      fetchMock.mockResolvedValue(
+        translationResponse('Mise à jour <x id="0"></x>'),
+      );
+
+      const result = await translateToFrench("Matchmaking update");
+
+      expect(requestBody().text[0]).toBe('<x id="0"></x> update');
+      expect(result).toBe("Mise à jour Matchmaking");
+    });
+
+    it("protège The Doorman avant Doorman pour ne pas couper le nom", async () => {
+      fetchMock.mockResolvedValue(
+        translationResponse('Mise à jour <x id="0"></x>'),
+      );
+
+      const result = await translateToFrench("The Doorman update");
+
+      expect(requestBody().text[0]).toBe('<x id="0"></x> update');
+      expect(result).toBe("Mise à jour The Doorman");
+    });
+
+    it("protège les sauts de ligne pour conserver la structure des patch notes", async () => {
+      fetchMock.mockResolvedValue(
+        translationResponse(
+          '<x id="0"></x>MODE STANDARD<x id="1"></x><x id="2"></x>Texte',
+        ),
+      );
+
+      const result = await translateToFrench("[b]STANDARD MODE[/b]\nText");
+
+      expect(requestBody().text[0]).toBe(
+        '<x id="0"></x>STANDARD MODE<x id="1"></x><x id="2"></x>Text',
+      );
+      expect(result).toBe("[b]MODE STANDARD[/b]\nTexte");
     });
 
     it("restaure les balises d'origine dans la traduction", async () => {

@@ -97,9 +97,18 @@ export const bbcodeToHtml = (bbcode: string) => {
     });
     bbcode = bbcode.replace(/\[li\]/gi, "<li>");
     bbcode = bbcode.replace(/\[\/li\]/gi, "</li>");
-    bbcode = bbcode.replace(/\[img width=(.*?)\](.*?)\[\/img\]/gmi, '<img src="$2" width="$1">');
+    // Steam / DeepL mettent parfois des sauts de ligne dans [img]…[/img] :
+    // le `.` ne les traverse pas, d'où l'usage de [\s\S] + trim de l'URL.
+    bbcode = bbcode.replace(
+      /\[img width=(.*?)\]([\s\S]*?)\[\/img\]/gmi,
+      (_m, width: string, src: string) =>
+        `<img src="${src.trim()}" width="${width}">`,
+    );
     bbcode = bbcode.replace(/\[img src="(.*?)"\](?:\[\/img\])?/gmi, '<img src="$1">');
-    bbcode = bbcode.replace(/\[img\](.*?)\[\/img\]/gmi, '<img src="$1">');
+    bbcode = bbcode.replace(
+      /\[img\]([\s\S]*?)\[\/img\]/gmi,
+      (_m, src: string) => `<img src="${src.trim()}">`,
+    );
     bbcode = bbcode.replace(/\[url=(.*?)\](.*?)\[\/url\]/gi, '<a href="$1" target="_blank">$2</a>');
     bbcode = bbcode.replace(/\[youtube\](.*?)\[\/youtube\]/gi, '<iframe frameborder="0" allowfullscreen="true" src="https://www.youtube.com/embed/$1?showinfo=0"></iframe>');
     bbcode = bbcode.replace(/\[video\](.*?)\[\/video\]/gi, '<iframe frameborder="0" allowfullscreen="true" src="$1"></iframe>');
