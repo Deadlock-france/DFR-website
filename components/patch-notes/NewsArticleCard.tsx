@@ -2,11 +2,17 @@
 
 import type { CSSProperties, ReactNode } from "react";
 import { ArrowRight, FileText } from "lucide-react";
-import { motion, useReducedMotion } from "motion/react";  
+import { motion, useReducedMotion } from "motion/react";
 import AppLink from "@/components/AppLink";
+import PatchSubjectAvatars from "@/components/patch-notes/PatchSubjectAvatars";
 import { cn } from "@/lib/utils";
-import { SteamNewsItem } from "@/lib/steam/types";
-import { formatPatchNotesContent, formatShortNewsDate, formatPatchNotesTitle } from "@/hooks/news/format";
+import type { DeadlockReference } from "@/lib/deadlock/types";
+import type { SteamNewsItem } from "@/lib/steam/types";
+import {
+  formatPatchNotesContent,
+  formatShortNewsDate,
+  formatPatchNotesTitle,
+} from "@/hooks/news/format";
 
 function CardShell({
   item,
@@ -39,7 +45,10 @@ function CardShell({
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover/news:opacity-100"
-        style={{ background: "linear-gradient(180deg, rgba(74, 155, 127, 0.1) 0%, transparent 100%)" }}
+        style={{
+          background:
+            "linear-gradient(180deg, rgba(74, 155, 127, 0.1) 0%, transparent 100%)",
+        }}
       />
       <div className="relative z-1">{children}</div>
     </AppLink>
@@ -60,9 +69,11 @@ function CardShell({
 
 export function NewsLeadCard({
   item,
+  subjects = [],
   label = "Dernière mise à jour",
 }: {
   item: SteamNewsItem;
+  subjects?: DeadlockReference[];
   label?: string;
 }) {
   return (
@@ -76,62 +87,72 @@ export function NewsLeadCard({
         className="pointer-events-none absolute inset-y-4 left-0 w-0.5 rounded-full"
         style={{ backgroundColor: "#4A9B7F" }}
       />
-      
+
       <div className="flex h-full flex-col pl-3">
-        <div className="flex gap-3 justify-between">
-      <div className="flex flex-wrap items-center gap-3">
-          <div
-            className="flex size-10 items-center justify-center rounded-xl"
-            style={{
-              borderColor: "rgba(74, 155, 127, 0.28)",
-              backgroundColor: "rgba(74, 155, 127, 0.12)",
-              color: "#6BB89A",
-            }}
-          >
-            <FileText className="size-4" aria-hidden />
-          </div>
-          <div className="flex flex-col gap-1">
-            <span
-              className="text-[11px] font-semibold uppercase tracking-[0.14em]"
-              style={{ color: "white" }}
+        <div className="flex justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <div
+              className="flex size-10 items-center justify-center rounded-xl"
+              style={{
+                borderColor: "rgba(74, 155, 127, 0.28)",
+                backgroundColor: "rgba(74, 155, 127, 0.12)",
+                color: "#6BB89A",
+              }}
             >
-              {label}
-            </span>
+              <FileText className="size-4" aria-hidden />
+            </div>
+            <div className="flex flex-col gap-1">
+              <span
+                className="text-[11px] font-semibold uppercase tracking-[0.14em]"
+                style={{ color: "white" }}
+              >
+                {label}
+              </span>
+            </div>
           </div>
-          
-        </div>
-        <time
+          <time
             dateTime={new Date(item.date * 1000).toISOString()}
             className="rounded-md px-2 py-1 text-xs font-medium"
-            style={{
-              color: "white",
-            }}
+            style={{ color: "white" }}
           >
             {formatShortNewsDate(item.date)}
           </time>
         </div>
-      <h3 className="mt-3 line-clamp-3 text-xl font-bold leading-snug tracking-[-0.02em] sm:text-2xl">
+
+        <h3 className="mt-3 line-clamp-3 text-xl font-bold leading-snug tracking-[-0.02em] sm:text-2xl">
           {formatPatchNotesTitle(item.title)}
-      </h3>
+        </h3>
+
         <div
           className="mt-4 line-clamp-5 flex-1 text-sm leading-relaxed text-muted-foreground sm:line-clamp-6"
-          dangerouslySetInnerHTML={{ __html: formatPatchNotesContent(item.contents) }}
+          dangerouslySetInnerHTML={{
+            __html: formatPatchNotesContent(item.contents),
+          }}
           style={{ maxHeight: "8em", overflow: "hidden" }}
         />
 
-        <span
-          className="mt-5 inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide transition-[gap] duration-200 group-hover/news:gap-2"
-          style={{ color: "white" }}
-        >
-          Lire l&apos;article
-          <ArrowRight className="size-3.5" />
-        </span>
+        <div className="mt-5 flex items-center justify-between gap-3">
+          <PatchSubjectAvatars subjects={subjects} />
+          <span
+            className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide transition-[gap] duration-200 group-hover/news:gap-2"
+            style={{ color: "white" }}
+          >
+            Lire l&apos;article
+            <ArrowRight className="size-3.5" />
+          </span>
+        </div>
       </div>
     </CardShell>
   );
 }
 
-export function NewsCompactCard({ item }: { item: SteamNewsItem }) {
+export function NewsCompactCard({
+  item,
+  subjects = [],
+}: {
+  item: SteamNewsItem;
+  subjects?: DeadlockReference[];
+}) {
   return (
     <CardShell
       item={item}
@@ -151,7 +172,9 @@ export function NewsCompactCard({ item }: { item: SteamNewsItem }) {
 
         <div
           className="mt-2 line-clamp-3 text-sm leading-relaxed text-muted-foreground"
-          dangerouslySetInnerHTML={{ __html: formatPatchNotesContent(item.contents) }}
+          dangerouslySetInnerHTML={{
+            __html: formatPatchNotesContent(item.contents),
+          }}
           style={{ maxHeight: "5em", overflow: "hidden" }}
         />
 
@@ -159,13 +182,14 @@ export function NewsCompactCard({ item }: { item: SteamNewsItem }) {
           className="mt-4 flex items-center justify-between gap-3 border-t pt-3"
           style={{ borderColor: "#1f2937" }}
         >
-          <span className="text-xs font-medium" style={{ color: "white" }}>
+          <PatchSubjectAvatars subjects={subjects} />
+          <span className="inline-flex items-center gap-2 text-xs font-medium" style={{ color: "white" }}>
             Voir le détail
+            <ArrowRight
+              className="size-4 transition-transform group-hover/news:translate-x-0.5"
+              style={{ color: "white" }}
+            />
           </span>
-          <ArrowRight
-            className="size-4 transition-transform group-hover/news:translate-x-0.5"
-            style={{ color: "white" }}
-          />
         </div>
       </div>
     </CardShell>

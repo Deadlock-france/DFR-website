@@ -95,6 +95,55 @@ describe("linkReferencesInHtml", () => {
     expect(html).toContain(">The Doorman</span>");
   });
 
+  it("priorise la compétence du héros sur l'item homonyme dans sa section", () => {
+    const refs: DeadlockReference[] = [
+      {
+        kind: "hero",
+        id: 50,
+        className: "hero_pocket",
+        name: "Pocket",
+        image: "https://example.com/pocket.webp",
+      },
+      {
+        kind: "item",
+        id: 2417568017,
+        className: "upgrade_discord",
+        name: "Fléau",
+        image: "https://example.com/item-fleau.webp",
+        itemSlotType: "spirit",
+      },
+      {
+        kind: "ability",
+        id: 2954330093,
+        className: "synth_affliction",
+        name: "Fléau",
+        image: "https://example.com/ability-fleau.webp",
+        heroId: 50,
+      },
+    ];
+
+    // Format réel des patch notes VF : `- [Pocket] Fléau …`
+    const underHero = linkReferencesInHtml(
+      "<p>- [Pocket] Fléau de niv. 3 : +14 de DPS</p>",
+      refs,
+    );
+    expect(underHero).toContain('data-deadlock-ref="ability:2954330093"');
+    expect(underHero).not.toContain('data-deadlock-ref="item:2417568017"');
+
+    const underHeroColon = linkReferencesInHtml(
+      "<p>- Pocket: Fléau de niv. 3 : +14 de DPS</p>",
+      refs,
+    );
+    expect(underHeroColon).toContain('data-deadlock-ref="ability:2954330093"');
+
+    const asItem = linkReferencesInHtml(
+      "<p>- Fléau: coût réduit de 3000 à 2800</p>",
+      refs,
+    );
+    expect(asItem).toContain('data-deadlock-ref="item:2417568017"');
+    expect(asItem).not.toContain('data-deadlock-ref="ability:2954330093"');
+  });
+
   it("retourne le HTML inchangé sans références", () => {
     expect(linkReferencesInHtml("<p>Infernus</p>", [])).toBe(
       "<p>Infernus</p>",
@@ -152,6 +201,40 @@ describe("decorateReferenceChangeLines", () => {
     expect(html).toContain('src="https://example.com/clip.webp"');
     expect(html).toContain("<li>meilleur sur");
     expect(html).toContain('data-deadlock-ref="hero:1"');
+  });
+
+  it("ne crée pas un groupe item pour un nom cité dans la description d'un héros", () => {
+    const refs: DeadlockReference[] = [
+      ...references,
+      {
+        kind: "item",
+        id: 40,
+        className: "upgrade_melee_lifesteal",
+        name: "Melee Lifesteal",
+        image: "https://example.com/lifesteal.webp",
+        itemSlotType: "vitality",
+      },
+      {
+        kind: "hero",
+        id: 77,
+        className: "hero_apollo",
+        name: "Apollo",
+        image: "https://example.com/apollo.webp",
+      },
+    ];
+
+    const linked = linkReferencesInHtml(
+      "<p>- Apollo: Riposte base stun duration increased from 0.6s to 0.8s</p><p>- Apollo: Riposte T3 changed from +1.6s Stun Duration to +60% Bullet, Spirit and Melee Lifesteal against the target for 7s</p>",
+      refs,
+    );
+    const html = decorateReferenceChangeLines(linked, refs, "english");
+
+    expect(html.match(/patch-notes-entity"/g)).toHaveLength(1);
+    expect(html).toContain('data-deadlock-entity="hero:77"');
+    expect(html).not.toContain('data-deadlock-entity="item:40"');
+    expect(html).toContain("<li>Riposte base stun duration increased from 0.6s to 0.8s</li>");
+    expect(html).toContain("Melee Lifesteal");
+    expect(html).toContain("<li>Riposte T3 changed from +1.6s Stun Duration to +60% Bullet, Spirit and");
   });
 
   it("regroupe plusieurs lignes du même héros sous un seul en-tête", () => {

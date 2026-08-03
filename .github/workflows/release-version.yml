@@ -1,0 +1,123 @@
+name: Release version
+
+# Crée un bump semver (patch / minor / major) depuis Integration uniquement.
+# Met à jour package.json + package-lock.json, pousse un tag, et peut merger
+# sur main sans jamais supprimer ni réécrire Integration.
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Type de version à incrémenter
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+        default: patch
+      merge_to_main:
+        description: Merger la version sur main après le tag
+        required: true
+        type: boolean
+        default: false
+
+# Un release ne doit pas être annulé en cours de push.
+concurrency:
+  group: release-version
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Bump ${{ inputs.bump }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Exiger la branche Integration
+        run: |
+          if [ "${GITHUB_REF}" != "refs/heads/Integration" ]; then
+            echo "::error::Ce workflow ne peut être lancé que depuis la branche Integration (ref actuelle: ${GITHUB_REF})."
+            exit 1
+          fi
+
+      - name: Checkout Integration
+        uses: actions/checkout@v7
+        with:
+          ref: Integration
+          fetch-depth: 0
+          # Pas de persist-credentials désactivé : on doit pouvoir push sans force.
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Configurer Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Incrémenter la version
+        id: bump
+        run: |
+          set -euo pipefail
+
+          CURRENT="$(node -p "require('./package.json').version")"
+          echo "Version actuelle: ${CURRENT}"
+
+          # Met à jour package.json et package-lock.json, crée le commit et le tag.
+          # Jamais --force : si le tag existe déjà, npm version échoue proprement.
+          TAG="$(npm version "${{ inputs.bump }}" -m "chore: release %s")"
+          VERSION="${TAG#v}"
+
+          echo "Nouvelle version: ${VERSION} (tag ${TAG})"
+          echo "version=${VERSION}" >> "${GITHUB_OUTPUT}"
+          echo "tag=${TAG}" >> "${GITHUB_OUTPUT}"
+
+          # Garde-fou : les deux fichiers doivent porter la même version.
+          PKG="$(node -p "require('./package.json').version")"
+          LOCK="$(node -p "require('./package-lock.json').version")"
+          if [ "${PKG}" != "${VERSION}" ] || [ "${LOCK}" != "${VERSION}" ]; then
+            echo "::error::Incohérence de version (package.json=${PKG}, package-lock.json=${LOCK}, attendu=${VERSION})"
+            exit 1
+          fi
+
+      - name: Pousser Integration et le tag
+        run: |
+          set -euo pipefail
+
+          # Push non-fast-forward refusé volontairement : on ne réécrit jamais l'historique.
+          git push origin "HEAD:Integration"
+          git push origin "refs/tags/${{ steps.bump.outputs.tag }}"
+
+      - name: Merger sur main
+        if: ${{ inputs.merge_to_main }}
+        run: |
+          set -euo pipefail
+
+          git fetch origin main
+
+          # Branche locale jetable basée sur origin/main — Integration n'est pas touchée.
+          git checkout -B main origin/main
+
+          git merge --no-ff "origin/Integration" \
+            -m "chore: merge ${{ steps.bump.outputs.tag }} into main"
+
+          # Push standard uniquement — aucun --force, aucune suppression de branche.
+          git push origin main
+
+          echo "Merge sur main terminé. La branche Integration est intacte."
+
+      - name: Résumé
+        run: |
+          echo "### Release ${{ steps.bump.outputs.tag }}" >> "${GITHUB_STEP_SUMMARY}"
+          echo "" >> "${GITHUB_STEP_SUMMARY}"
+          echo "- Bump: \`${{ inputs.bump }}\`" >> "${GITHUB_STEP_SUMMARY}"
+          echo "- Version: \`${{ steps.bump.outputs.version }}\`" >> "${GITHUB_STEP_SUMMARY}"
+          echo "- Branche source: \`Integration\` (préservée)" >> "${GITHUB_STEP_SUMMARY}"
+          echo "- Merge sur main: \`${{ inputs.merge_to_main }}\`" >> "${GITHUB_STEP_SUMMARY}"

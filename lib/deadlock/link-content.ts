@@ -56,20 +56,67 @@ function buildReferencesByKey(
   return map;
 }
 
-function pickChangeLineSubjectKey(segment: string): string | undefined {
-  const keys = [
-    ...segment.matchAll(/data-deadlock-ref="((?:hero|item|ability):\d+)"/g),
-  ].map((match) => match[1]);
+/**
+ * Index du `:` séparant le sujet du changelog (hors attributs HTML type hero:11).
+ */
+function findSubjectColonIndex(html: string): number {
+  let tagDepth = 0;
 
-  if (keys.length === 0) {
+  for (let index = 0; index < html.length; index += 1) {
+    const char = html[index];
+
+    if (char === "<") {
+      tagDepth += 1;
+      continue;
+    }
+
+    if (char === ">") {
+      tagDepth = Math.max(0, tagDepth - 1);
+      continue;
+    }
+
+    if (tagDepth === 0 && char === ":") {
+      return index;
+    }
+  }
+
+  return -1;
+}
+
+/**
+ * Sujet de la ligne de changelog uniquement (tête de ligne), pas un nom
+ * cité plus loin dans la description (ex. « Melee Lifesteal » dans un buff Apollo).
+ */
+function pickChangeLineSubjectKey(segment: string): string | undefined {
+  const trimmed = stripLeadingBullet(segment).trim();
+  if (!trimmed) {
     return undefined;
   }
 
-  return (
-    keys.find((key) => key.startsWith("item:")) ??
-    keys.find((key) => key.startsWith("hero:")) ??
-    keys[0]
-  );
+  const firstRefIn = (html: string): string | undefined => {
+    const match = html.match(
+      /data-deadlock-ref="((?:hero|item|ability):\d+)"/i,
+    );
+    return match?.[1];
+  };
+
+  // VF : [Alphonse/Doorman] …
+  const bracketMatch = trimmed.match(BRACKET_DUAL_NAME_PATTERN);
+  if (bracketMatch) {
+    return firstRefIn(bracketMatch[0]);
+  }
+
+  const colonIndex = findSubjectColonIndex(trimmed);
+  if (colonIndex !== -1) {
+    return firstRefIn(trimmed.slice(0, colonIndex));
+  }
+
+  // Ligne qui n'est que le nom (éventuellement linké).
+  return firstRefIn(trimmed) &&
+    plainText(trimmed).length <= 80 &&
+    !/[.!?…]/.test(plainText(trimmed))
+    ? firstRefIn(trimmed)
+    : undefined;
 }
 
 function plainText(segment: string): string {
@@ -428,24 +475,110 @@ export function decorateReferenceChangeLines(
   return output.join("");
 }
 
-function buildReferenceLookup(
+function buildReferenceCandidates(
   references: DeadlockReference[],
-): Map<string, DeadlockReference> {
-  const lookup = new Map<string, DeadlockReference>();
+): Map<string, DeadlockReference[]> {
+  const lookup = new Map<string, DeadlockReference[]>();
 
   for (const reference of references) {
     for (const term of getReferenceMatchTerms(reference)) {
       const key = normalizeReferenceName(term);
 
-      if (!key || lookup.has(key) || isExcludedReferenceName(term)) {
+      if (!key || isExcludedReferenceName(term)) {
         continue;
       }
 
-      lookup.set(key, reference);
+      const current = lookup.get(key) ?? [];
+      if (
+        !current.some(
+          (entry) => referenceKey(entry) === referenceKey(reference),
+        )
+      ) {
+        current.push(reference);
+      }
+      lookup.set(key, current);
     }
   }
 
   return lookup;
+}
+
+/**
+ * Dans une ligne `Pocket: … Fléau …`, la compétence de Pocket prime sur l'item
+ * homonyme. Hors contexte héros, l'item boutique reste prioritaire.
+ */
+function resolveReferenceCandidate(
+  candidates: DeadlockReference[],
+  preferredHeroId?: number,
+): DeadlockReference | undefined {
+  if (candidates.length === 0) {
+    return undefined;
+  }
+
+  if (preferredHeroId != null) {
+    const ownedAbility = candidates.find(
+      (candidate) =>
+        candidate.kind === "ability" && candidate.heroId === preferredHeroId,
+    );
+    if (ownedAbility) {
+      return ownedAbility;
+    }
+  }
+
+  return (
+    candidates.find((candidate) => candidate.kind === "item") ??
+    candidates.find((candidate) => candidate.kind === "hero") ??
+    candidates.find((candidate) => candidate.kind === "ability") ??
+    candidates[0]
+  );
+}
+
+function detectPreferredHeroId(
+  plainLine: string,
+  candidates: Map<string, DeadlockReference[]>,
+): number | undefined {
+  const trimmed = plainLine.replace(/^[-–•*·.]\s*/, "").trim();
+  if (!trimmed) {
+    return undefined;
+  }
+
+  const names: string[] = [];
+
+  // VF Steam : `[Pocket] …` ou `[Alphonse/Doorman] …`
+  const bracket = trimmed.match(/^\[([^\]]+)\]/);
+  if (bracket) {
+    names.push(
+      ...bracket[1]
+        .split("/")
+        .map((part) => part.trim())
+        .filter(Boolean),
+    );
+  } else {
+    const colonIndex = trimmed.indexOf(":");
+    if (colonIndex > 0 && colonIndex <= 80) {
+      names.push(
+        trimmed
+          .slice(0, colonIndex)
+          .replace(/\([^)]*\)/g, "")
+          .trim(),
+      );
+    }
+  }
+
+  for (const name of names) {
+    if (!name) {
+      continue;
+    }
+
+    const hero = candidates
+      .get(normalizeReferenceName(name))
+      ?.find((candidate) => candidate.kind === "hero");
+    if (hero) {
+      return hero.id;
+    }
+  }
+
+  return undefined;
 }
 
 function buildReferencePattern(references: DeadlockReference[]): RegExp | null {
@@ -470,7 +603,8 @@ function buildReferencePattern(references: DeadlockReference[]): RegExp | null {
 function linkTextSegment(
   text: string,
   pattern: RegExp,
-  lookup: Map<string, DeadlockReference>,
+  candidates: Map<string, DeadlockReference[]>,
+  preferredHeroId?: number,
 ): string {
   if (!text) {
     return text;
@@ -491,7 +625,10 @@ function linkTextSegment(
       continue;
     }
 
-    const reference = lookup.get(normalizeReferenceName(matchedText));
+    const reference = resolveReferenceCandidate(
+      candidates.get(normalizeReferenceName(matchedText)) ?? [],
+      preferredHeroId,
+    );
     if (!reference) {
       continue;
     }
@@ -511,6 +648,24 @@ function linkTextSegment(
   return result;
 }
 
+function linkHtmlFragment(
+  html: string,
+  pattern: RegExp,
+  candidates: Map<string, DeadlockReference[]>,
+  preferredHeroId?: number,
+): string {
+  return html
+    .split(/(<[^>]+>)/g)
+    .map((part) => {
+      if (!part || part.startsWith("<")) {
+        return part;
+      }
+
+      return linkTextSegment(part, pattern, candidates, preferredHeroId);
+    })
+    .join("");
+}
+
 /** Insère des liens survolables autour des noms d'héros, items et capacités. */
 export function linkReferencesInHtml(
   html: string,
@@ -520,7 +675,7 @@ export function linkReferencesInHtml(
     return html;
   }
 
-  const lookup = buildReferenceLookup(references);
+  const candidates = buildReferenceCandidates(references);
   const pattern = buildReferencePattern(references);
 
   if (!pattern) {
@@ -528,13 +683,27 @@ export function linkReferencesInHtml(
   }
 
   return html
-    .split(/(<[^>]+>)/g)
+    .split(/(<p>[\s\S]*?<\/p>|<br\s*\/?>)/gi)
     .map((part) => {
-      if (!part || part.startsWith("<")) {
+      if (!part) {
         return part;
       }
 
-      return linkTextSegment(part, pattern, lookup);
+      if (/^<br\s*\/?>$/i.test(part)) {
+        return part;
+      }
+
+      const paragraph = part.match(/^<p>([\s\S]*?)<\/p>$/i);
+      if (paragraph) {
+        const preferredHeroId = detectPreferredHeroId(
+          plainText(paragraph[1]),
+          candidates,
+        );
+        return `<p>${linkHtmlFragment(paragraph[1], pattern, candidates, preferredHeroId)}</p>`;
+      }
+
+      const preferredHeroId = detectPreferredHeroId(plainText(part), candidates);
+      return linkHtmlFragment(part, pattern, candidates, preferredHeroId);
     })
     .join("");
 }

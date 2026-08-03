@@ -4,6 +4,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ExternalLink,
+  Heart,
   Home,
   Newspaper,
   type LucideIcon,
@@ -11,7 +12,7 @@ import {
 import { useReducedMotion } from "motion/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useSyncExternalStore } from "react";
+import { useSyncExternalStore, type ComponentType } from "react";
 import NavLink from "@/components/motion/NavLink";
 import { Button, buttonVariants } from "@/components/shadcn/button";
 import { Separator } from "@/components/shadcn/separator";
@@ -20,6 +21,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/shadcn/tooltip";
+import { DiscordIcon, XIcon } from "@/components/social/SocialIcons";
+import SidebarSocialCard from "@/components/social/SidebarSocialCard";
 import {
   NAV_WIDTH_TRANSITION,
   navDockClassName,
@@ -34,6 +37,12 @@ import {
   setSidebarOpen,
   subscribeSidebarOpen,
 } from "@/lib/layout/sidebar";
+import {
+  DISCORD_INVITE_URL,
+  DONATE_URL,
+  STEAM_STORE_URL,
+  TWITTER_URL,
+} from "@/lib/social/links";
 import { cn } from "@/lib/utils";
 import { useHydrated } from "@/hooks/use-hydrated";
 
@@ -44,6 +53,15 @@ const NAV_ITEMS: ReadonlyArray<{ href: string; label: string; icon: LucideIcon }
   //{ href: "/showmatch", label: "Showmatch", icon: Gamepad2 },
   //{ href: "/items", label: "Items", icon: ShoppingBag },
   //{ href: "/unban", label: "Déban", icon: Gavel },
+];
+
+const SOCIAL_LINKS: ReadonlyArray<{
+  href: string;
+  label: string;
+  icon: ComponentType<{ className?: string }>;
+}> = [
+  { href: DISCORD_INVITE_URL, label: "Discord", icon: DiscordIcon },
+  { href: TWITTER_URL, label: "X / Twitter", icon: XIcon },
 ];
 
 function NavDock({
@@ -304,15 +322,98 @@ export default function AppSidebar() {
           <div
             className={cn(
               "flex flex-col gap-2",
-              collapsed ? "items-center" : "items-stretch"
+              collapsed ? "items-center" : "items-stretch",
             )}
           >
+            <div
+              className="overflow-hidden"
+              style={{
+                maxHeight: collapsed ? 0 : 300,
+                opacity: collapsed ? 0 : 1,
+                marginBottom: collapsed ? 0 : 2,
+                transition: animated
+                  ? `max-height ${NAV_WIDTH_TRANSITION}, opacity 0.18s ease, margin 0.28s ease`
+                  : undefined,
+                pointerEvents: collapsed ? "none" : "auto",
+              }}
+            >
+              <SidebarSocialCard />
+            </div>
+
+            <div
+              className={cn(
+                collapsed ? "flex" : "hidden",
+                "flex-col items-center gap-2",
+              )}
+              aria-label="Réseaux sociaux"
+            >
+              {SOCIAL_LINKS.map(({ href, label, icon: Icon }) => (
+                <Tooltip key={href}>
+                  <TooltipTrigger
+                    render={
+                      <a
+                        href={href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label={label}
+                        className={cn(
+                          buttonVariants({ variant: "outline", size: "icon-sm" }),
+                          "rounded-[14px] max-md:size-11 max-md:[&_svg]:size-5",
+                          navIconButtonClassName,
+                        )}
+                      />
+                    }
+                  >
+                    <Icon className="size-[18px] max-md:size-5" />
+                  </TooltipTrigger>
+                  <TooltipContent side="right">{label}</TooltipContent>
+                </Tooltip>
+              ))}
+            </div>
+
             {collapsed ? (
               <Tooltip>
                 <TooltipTrigger
                   render={
                     <a
-                      href={""}
+                      href={DONATE_URL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label="Faire un don"
+                      className={cn(
+                        buttonVariants({ variant: "outline", size: "icon-sm" }),
+                        "rounded-[14px] max-md:size-11 max-md:[&_svg]:size-5",
+                        navIconButtonClassName,
+                      )}
+                    />
+                  }
+                >
+                  <Heart className="max-md:size-5" size={18} />
+                </TooltipTrigger>
+                <TooltipContent side="right">Soutenir le projet</TooltipContent>
+              </Tooltip>
+            ) : (
+              <a
+                href={DONATE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={cn(
+                  buttonVariants({ size: "sm" }),
+                  "h-9 w-full gap-1.5 border-0 px-2.5 text-[0.8125rem] font-semibold text-white shadow-none transition-[filter] hover:brightness-110 max-md:h-11 max-md:text-base",
+                )}
+                style={{ backgroundColor: "#4A9B7F" }}
+              >
+                <Heart className="size-3.5 max-md:size-4" />
+                Soutenir le projet
+              </a>
+            )}
+
+            {collapsed ? (
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <a
+                      href={STEAM_STORE_URL}
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label="Ouvrir la page Steam"
@@ -330,7 +431,7 @@ export default function AppSidebar() {
               </Tooltip>
             ) : (
               <a
-                href={""}
+                href={STEAM_STORE_URL}
                 target="_blank"
                 rel="noopener noreferrer"
                 className={cn(
