@@ -21,7 +21,7 @@ export default async function NewsPage() {
     <div>
       <PageHero
         title="Patch notes"
-        description="Toutes les mises à jour de Deadlock, de la plus récente à la plus ancienne."
+        description="Dernières mises à jour de Deadlock."
       />
 
       <NewsListFeed

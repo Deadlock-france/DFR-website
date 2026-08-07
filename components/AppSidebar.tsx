@@ -1,8 +1,10 @@
 "use client";
 
 import {
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
   ExternalLink,
   Heart,
   Home,
@@ -32,10 +34,14 @@ import {
 } from "@/lib/layout/nav-dock";
 import {
   getSidebarOpenServerSnapshot,
+  getSocialMinifiedServerSnapshot,
   isActivePath,
   readSidebarOpen,
+  readSocialMinified,
   setSidebarOpen,
+  setSocialMinified,
   subscribeSidebarOpen,
+  subscribeSocialMinified,
 } from "@/lib/layout/sidebar";
 import {
   DISCORD_INVITE_URL,
@@ -49,8 +55,8 @@ import { useHydrated } from "@/hooks/use-hydrated";
 const NAV_ITEMS: ReadonlyArray<{ href: string; label: string; icon: LucideIcon }> = [
   { href: "/", label: "Accueil", icon: Home },
   { href: "/patch-notes", label: "Patch notes", icon: Newspaper },
-  //{ href: "/team", label: "Équipe", icon: Users },
   //{ href: "/showmatch", label: "Showmatch", icon: Gamepad2 },
+  //{ href: "/team", label: "Équipe", icon: Users },
   //{ href: "/items", label: "Items", icon: ShoppingBag },
   //{ href: "/unban", label: "Déban", icon: Gavel },
 ];
@@ -122,6 +128,50 @@ function SidebarIconButton({
   );
 }
 
+function SocialIconLinks({
+  orientation,
+  tooltipSide = "right",
+}: {
+  orientation: "horizontal" | "vertical";
+  tooltipSide?: "right" | "top";
+}) {
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-2",
+        orientation === "horizontal" ? "flex-row px-0.5" : "flex-col",
+      )}
+      aria-label="Réseaux sociaux"
+    >
+      {SOCIAL_LINKS.map(({ href, label, icon: Icon }) => (
+        <Tooltip key={href}>
+          <TooltipTrigger
+            render={
+              <a
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={label}
+                className={cn(
+                  buttonVariants({ variant: "outline", size: "icon-sm" }),
+                  "rounded-[14px] max-md:h-11 max-md:[&_svg]:size-5",
+                  orientation === "horizontal"
+                    ? "h-9 flex-1"
+                    : "max-md:size-11",
+                  navIconButtonClassName,
+                )}
+              />
+            }
+          >
+            <Icon className="size-[18px] max-md:size-5" />
+          </TooltipTrigger>
+          <TooltipContent side={tooltipSide}>{label}</TooltipContent>
+        </Tooltip>
+      ))}
+    </div>
+  );
+}
+
 export default function AppSidebar() {
   const pathname = usePathname();
   const reduceMotion = useReducedMotion();
@@ -130,10 +180,19 @@ export default function AppSidebar() {
     readSidebarOpen,
     getSidebarOpenServerSnapshot,
   );
+  const socialMinified = useSyncExternalStore(
+    subscribeSocialMinified,
+    readSocialMinified,
+    getSocialMinifiedServerSnapshot,
+  );
   const hydrated = useHydrated();
 
   function toggleSidebar() {
     setSidebarOpen(!open);
+  }
+
+  function toggleSocialMinified() {
+    setSocialMinified(!socialMinified);
   }
 
   const collapsed = !open;
@@ -325,51 +384,52 @@ export default function AppSidebar() {
               collapsed ? "items-center" : "items-stretch",
             )}
           >
-            <div
-              className="overflow-hidden"
-              style={{
-                maxHeight: collapsed ? 0 : 300,
-                opacity: collapsed ? 0 : 1,
-                marginBottom: collapsed ? 0 : 2,
-                transition: animated
-                  ? `max-height ${NAV_WIDTH_TRANSITION}, opacity 0.18s ease, margin 0.28s ease`
-                  : undefined,
-                pointerEvents: collapsed ? "none" : "auto",
-              }}
-            >
-              <SidebarSocialCard />
-            </div>
+            {!collapsed ? (
+              <>
+                <div className="flex items-center justify-between gap-1 px-1.5">
+                  <p className="font-bold tracking-[0.14em] text-muted-foreground uppercase text-[0.65rem] max-md:text-xs">
+                    Réseaux
+                  </p>
+                  <Tooltip>
+                    <TooltipTrigger
+                      render={
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={toggleSocialMinified}
+                          aria-label={
+                            socialMinified
+                              ? "Agrandir les réseaux"
+                              : "Réduire les réseaux"
+                          }
+                          aria-expanded={!socialMinified}
+                          className="size-6 rounded-lg text-muted-foreground hover:text-foreground"
+                        />
+                      }
+                    >
+                      {socialMinified ? (
+                        <ChevronUp size={14} />
+                      ) : (
+                        <ChevronDown size={14} />
+                      )}
+                    </TooltipTrigger>
+                    <TooltipContent side="right">
+                      {socialMinified
+                        ? "Agrandir les réseaux"
+                        : "Réduire les réseaux"}
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
 
-            <div
-              className={cn(
-                collapsed ? "flex" : "hidden",
-                "flex-col items-center gap-2",
-              )}
-              aria-label="Réseaux sociaux"
-            >
-              {SOCIAL_LINKS.map(({ href, label, icon: Icon }) => (
-                <Tooltip key={href}>
-                  <TooltipTrigger
-                    render={
-                      <a
-                        href={href}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        aria-label={label}
-                        className={cn(
-                          buttonVariants({ variant: "outline", size: "icon-sm" }),
-                          "rounded-[14px] max-md:size-11 max-md:[&_svg]:size-5",
-                          navIconButtonClassName,
-                        )}
-                      />
-                    }
-                  >
-                    <Icon className="size-[18px] max-md:size-5" />
-                  </TooltipTrigger>
-                  <TooltipContent side="right">{label}</TooltipContent>
-                </Tooltip>
-              ))}
-            </div>
+                {socialMinified ? (
+                  <SocialIconLinks orientation="horizontal" tooltipSide="top" />
+                ) : (
+                  <SidebarSocialCard />
+                )}
+              </>
+            ) : (
+              <SocialIconLinks orientation="vertical" />
+            )}
 
             {collapsed ? (
               <Tooltip>

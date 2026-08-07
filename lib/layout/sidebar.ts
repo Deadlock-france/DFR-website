@@ -1,4 +1,5 @@
 export const SIDEBAR_STORAGE_KEY = "deadlock-actus-sidebar-open";
+export const SOCIAL_MINIFIED_STORAGE_KEY = "deadlock-actus-social-minified";
 
 export const SIDEBAR_WIDTH_OPEN = 252;
 export const SIDEBAR_WIDTH_COLLAPSED = 76;
@@ -18,6 +19,7 @@ export function writeSidebarOpen(open: boolean): void {
 }
 
 const SIDEBAR_CHANGE_EVENT = "deadlock-actus-sidebar-change";
+const SOCIAL_MINIFIED_CHANGE_EVENT = "deadlock-actus-social-minified-change";
 
 /**
  * localStorage n'émet rien pour l'onglet qui écrit : cet évènement permet à
@@ -38,6 +40,33 @@ export function setSidebarOpen(open: boolean): void {
 /** Valeur servie pendant le rendu serveur et l'hydratation. */
 export function getSidebarOpenServerSnapshot(): boolean {
   return true;
+}
+
+/** Carte réseaux repliée : seuls les boutons icônes restent visibles. */
+export function readSocialMinified(): boolean {
+  if (typeof window === "undefined") return false;
+  return localStorage.getItem(SOCIAL_MINIFIED_STORAGE_KEY) === "true";
+}
+
+export function writeSocialMinified(minified: boolean): void {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(SOCIAL_MINIFIED_STORAGE_KEY, String(minified));
+}
+
+export function subscribeSocialMinified(onChange: () => void): () => void {
+  if (typeof window === "undefined") return () => {};
+  window.addEventListener(SOCIAL_MINIFIED_CHANGE_EVENT, onChange);
+  return () => window.removeEventListener(SOCIAL_MINIFIED_CHANGE_EVENT, onChange);
+}
+
+export function setSocialMinified(minified: boolean): void {
+  if (typeof window === "undefined") return;
+  writeSocialMinified(minified);
+  window.dispatchEvent(new Event(SOCIAL_MINIFIED_CHANGE_EVENT));
+}
+
+export function getSocialMinifiedServerSnapshot(): boolean {
+  return false;
 }
 
 /**
