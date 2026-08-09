@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import RankBadge from "@/components/showmatch/RankBadge";
 import type {
   ShowmatchHeroPreview,
   ShowmatchSeriesSummary,
@@ -130,9 +131,17 @@ function TeamBlock({
           mirror && "justify-end",
         )}
       >
-        <div className="flex gap-1.5">
+        <div className="flex items-center gap-1.5">
           <dt className="text-[#7f9094]">Rang</dt>
-          <dd className="tabular-nums text-foreground/90">{avgRank.toFixed(1)}</dd>
+          <dd>
+            <RankBadge
+              score={avgRank}
+              size="sm"
+              showScore
+              mirror={mirror}
+              className="normal-case tracking-normal"
+            />
+          </dd>
         </div>
       </dl>
     </div>
