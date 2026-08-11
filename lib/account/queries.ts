@@ -22,7 +22,10 @@ import {
   normalizeTeamTag,
 } from "@/lib/account/types";
 import type { DeadlockHero } from "@/lib/deadlock/types";
-import { resolveShowmatchHero } from "@/lib/showmatch/heroes";
+import {
+  getShowmatchHeroMap,
+  resolveShowmatchHero,
+} from "@/lib/showmatch/heroes";
 
 /** Une seule lecture JWT par requête RSC (layout dock + page). */
 export const getCurrentUserId = cache(async (): Promise<string | null> => {
@@ -345,6 +348,31 @@ export async function getTeamMessages(
 }
 
 /**
+ * Lecture seule du player showmatch lié au compte (pas de claim).
+ * Le claim reste sur le callback Discord / actions explicites.
+ */
+export async function getShowmatchPlayerForUser(
+  userId: string,
+): Promise<ShowmatchPlayerRef | null> {
+  const supabase = await createReadonlyClient();
+  const { data, error } = await supabase
+    .from("players")
+    .select("id, discord_username, display_name, claimed_at")
+    .eq("auth_user_id", userId)
+    .maybeSingle();
+
+  if (error) throw error;
+  if (!data) return null;
+
+  return {
+    id: data.id as string,
+    discordUsername: data.discord_username as string,
+    displayName: data.display_name as string,
+    claimedAt: (data.claimed_at as string | null) ?? null,
+  };
+}
+
+/**
  * Claim automatique (RPC SQL si dispo, sinon service_role TS) puis
  * renvoie le player showmatch lié au compte.
  */
@@ -365,27 +393,13 @@ export async function claimAndGetShowmatchPlayer(
     }
   }
 
-  const supabase = await createReadonlyClient();
-  const { data, error } = await supabase
-    .from("players")
-    .select("id, discord_username, display_name, claimed_at")
-    .eq("auth_user_id", userId)
-    .maybeSingle();
-
-  if (error) throw error;
-  if (!data) return null;
-
-  return {
-    id: data.id as string,
-    discordUsername: data.discord_username as string,
-    displayName: data.display_name as string,
-    claimedAt: (data.claimed_at as string | null) ?? null,
-  };
+  return getShowmatchPlayerForUser(userId);
 }
 
 export async function getShowmatchHistoryForPlayer(
   playerId: string,
-  heroes: DeadlockHero[],
+  heroes?: DeadlockHero[],
+  limit = 30,
 ): Promise<ShowmatchHistoryEntry[]> {
   const supabase = await createReadonlyClient();
   const { data, error } = await supabase
@@ -394,24 +408,28 @@ export async function getShowmatchHistoryForPlayer(
       "participant_id, player_id, game_id, series_id, showmatch_id, hero_id, net_worth, kills, deaths, assists, is_mvp, team_name, team_side, won, started_at, duration_seconds, game_number, lobby_number, scheduled_at, event_title",
     )
     .eq("player_id", playerId)
-    .order("scheduled_at", { ascending: false });
+    .order("scheduled_at", { ascending: false })
+    .limit(limit);
 
   if (error) throw error;
 
-  const heroMap = new Map(
-    heroes.map((h) => [
-      h.id,
-      {
-        name: h.name,
-        imageUrl:
-          h.images.icon_hero_card_webp ??
-          h.images.icon_hero_card ??
-          h.images.icon_image_small_webp ??
-          h.images.icon_image_small ??
-          "",
-      },
-    ]),
-  );
+  const heroMap =
+    heroes != null
+      ? new Map(
+          heroes.map((h) => [
+            h.id,
+            {
+              name: h.name,
+              imageUrl:
+                h.images.icon_hero_card_webp ??
+                h.images.icon_hero_card ??
+                h.images.icon_image_small_webp ??
+                h.images.icon_image_small ??
+                "",
+            },
+          ]),
+        )
+      : await getShowmatchHeroMap();
 
   return (data ?? []).map((row) => {
     const hero = resolveShowmatchHero(heroMap, Number(row.hero_id));
@@ -426,13 +444,13 @@ export async function getShowmatchHistoryForPlayer(
       scheduledAt: (row.scheduled_at as string | null) ?? null,
       startedAt: (row.started_at as string | null) ?? null,
       lobbyNumber: (row.lobby_number as number | null) ?? null,
-      gameNumber: Number(row.game_number ?? 1),
-      teamName: (row.team_name as string) ?? "Équipe",
+      gameNumber: Number(row.game_number),
+      teamName: (row.team_name as string) ?? "",
       teamSide:
         side === "amber" || side === "sapphire"
-          ? side
+          ? (side as "amber" | "sapphire")
           : null,
-      won: typeof row.won === "boolean" ? row.won : null,
+      won: (row.won as boolean | null) ?? null,
       heroId: Number(row.hero_id),
       heroName: hero.name,
       heroImageUrl: hero.imageUrl || null,
@@ -441,8 +459,7 @@ export async function getShowmatchHistoryForPlayer(
       assists: Number(row.assists ?? 0),
       netWorth: Number(row.net_worth ?? 0),
       isMvp: Boolean(row.is_mvp),
-      durationSeconds:
-        row.duration_seconds == null ? null : Number(row.duration_seconds),
+      durationSeconds: (row.duration_seconds as number | null) ?? null,
     };
   });
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Pencil, X } from "lucide-react";
 
 import HeroPrefsForm from "@/components/account/HeroPrefsForm";
@@ -9,7 +9,9 @@ import type { DeadlockHero } from "@/lib/deadlock/types";
 import type { ProfileHeroPref } from "@/lib/account/types";
 import { cn } from "@/lib/utils";
 
-function heroImage(hero: DeadlockHero | undefined): string | null {
+type HeroPreview = Pick<DeadlockHero, "id" | "name" | "images">;
+
+function heroImage(hero: HeroPreview | undefined): string | null {
   if (!hero) return null;
   return (
     hero.images.icon_hero_card_webp ||
@@ -24,10 +26,38 @@ export default function HeroPrefsSection({
   heroes,
   prefs,
 }: {
-  heroes: DeadlockHero[];
+  heroes: HeroPreview[];
   prefs: ProfileHeroPref[];
 }) {
   const [editing, setEditing] = useState(false);
+  const [catalog, setCatalog] = useState<DeadlockHero[] | null>(null);
+  const [catalogLoading, setCatalogLoading] = useState(false);
+  const [catalogError, setCatalogError] = useState(false);
+
+  useEffect(() => {
+    if (!editing || catalog || catalogLoading) return;
+
+    let cancelled = false;
+    setCatalogLoading(true);
+    setCatalogError(false);
+
+    void fetch("/api/deadlock/heroes", { credentials: "same-origin" })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("heroes_fetch_failed");
+        const data = (await response.json()) as { heroes: DeadlockHero[] };
+        if (!cancelled) setCatalog(data.heroes ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setCatalogError(true);
+      })
+      .finally(() => {
+        if (!cancelled) setCatalogLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [editing, catalog, catalogLoading]);
 
   const byId = new Map(heroes.map((h) => [h.id, h]));
   const slots = ([1, 2, 3] as const).map((priority) => {
@@ -75,7 +105,17 @@ export default function HeroPrefsSection({
 
       {editing ? (
         <div className="mt-4">
-          <HeroPrefsForm heroes={heroes} prefs={prefs} />
+          {catalogLoading ? (
+            <p className="text-sm text-muted-foreground">
+              Chargement des héros…
+            </p>
+          ) : catalogError || !catalog ? (
+            <p className="text-sm text-destructive">
+              Impossible de charger le catalogue des héros.
+            </p>
+          ) : (
+            <HeroPrefsForm heroes={catalog} prefs={prefs} />
+          )}
         </div>
       ) : (
         <div className="mt-4 grid gap-3 sm:grid-cols-3">

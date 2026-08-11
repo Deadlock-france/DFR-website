@@ -7,7 +7,11 @@ import ShowmatchHistorySection from "@/components/account/ShowmatchHistorySectio
 import FadeIn from "@/components/motion/FadeIn";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/shadcn/avatar";
 import { buttonVariants } from "@/components/shadcn/button";
-import { subscribeAccountInvalidation } from "@/lib/account/client-cache";
+import {
+  readStoredProfilPayload,
+  subscribeAccountInvalidation,
+  writeStoredProfilPayload,
+} from "@/lib/account/client-cache";
 import type {
   Profile,
   ProfileHeroPref,
@@ -23,7 +27,7 @@ type ProfilPayload = {
   profile: Profile | null;
   displayLabel?: string;
   prefs?: ProfileHeroPref[];
-  heroes?: DeadlockHero[];
+  heroes?: Array<Pick<DeadlockHero, "id" | "name" | "images">>;
   showmatchPlayer?: ShowmatchPlayerRef | null;
   showmatchHistory?: ShowmatchHistoryEntry[];
 };
@@ -38,8 +42,14 @@ type FlashParams = {
 let cachedPayload: ProfilPayload | null | undefined;
 let inflight: Promise<ProfilPayload | null> | null = null;
 
-async function loadProfil(force = false): Promise<ProfilPayload | null> {
-  if (!force && cachedPayload !== undefined) return cachedPayload;
+function hydrateFromSession(): ProfilPayload | null | undefined {
+  if (cachedPayload !== undefined) return cachedPayload;
+  const stored = readStoredProfilPayload<ProfilPayload>();
+  if (stored !== undefined) cachedPayload = stored;
+  return cachedPayload;
+}
+
+async function revalidateProfil(): Promise<ProfilPayload | null> {
   if (inflight) return inflight;
 
   inflight = (async () => {
@@ -52,20 +62,32 @@ async function loadProfil(force = false): Promise<ProfilPayload | null> {
       });
       if (!response.ok) {
         cachedPayload = null;
+        writeStoredProfilPayload(null);
         return null;
       }
       const data = (await response.json()) as { user: ProfilPayload | null };
       cachedPayload = data.user;
+      writeStoredProfilPayload(cachedPayload);
       return cachedPayload;
     } catch {
-      cachedPayload = null;
-      return null;
+      return cachedPayload ?? null;
     } finally {
       inflight = null;
     }
   })();
 
   return inflight;
+}
+
+async function loadProfil(force = false): Promise<ProfilPayload | null> {
+  if (!force) {
+    const hydrated = hydrateFromSession();
+    if (hydrated !== undefined) {
+      void revalidateProfil();
+      return hydrated;
+    }
+  }
+  return revalidateProfil();
 }
 
 export default function ProfilPageClient() {
@@ -87,15 +109,16 @@ export default function ProfilPageClient() {
       claimError,
     });
 
-    // Après save héros / claim : invalider le cache module sinon l'UI reste stale.
-    if (
+    const mustRefresh =
       heroesFlash === "1" ||
       errorFlash === "heroes" ||
       errorFlash === "hero_dup" ||
       claim === "1" ||
-      claimError
-    ) {
+      Boolean(claimError);
+
+    if (mustRefresh) {
       cachedPayload = undefined;
+      writeStoredProfilPayload(undefined);
       void loadProfil(true).then(setPayload);
     }
 
@@ -127,9 +150,12 @@ export default function ProfilPageClient() {
 
   useEffect(() => {
     let cancelled = false;
+
+    const hydrated = hydrateFromSession();
+    if (hydrated !== undefined) setPayload(hydrated);
+
     void loadProfil().then((next) => {
-      if (cancelled) return;
-      setPayload(next);
+      if (!cancelled) setPayload(next);
     });
 
     const unsubscribe = subscribeAccountInvalidation(() => {
@@ -192,9 +218,7 @@ export default function ProfilPageClient() {
   const label = payload.displayLabel ?? "Joueur";
   const initials = label.slice(0, 2).toUpperCase();
 
-  const flashMessage = flash.heroes
-    ? "Héros préférés enregistrés."
-    : null;
+  const flashMessage = flash.heroes ? "Héros préférés enregistrés." : null;
 
   const errorMessage =
     flash.error === "heroes" || flash.error === "hero_dup"

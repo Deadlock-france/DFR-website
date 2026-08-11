@@ -6,18 +6,28 @@ import AppAccountDock, {
   type AccountDockUser,
 } from "@/components/account/AppAccountDock";
 import MobileBottomNav from "@/components/navigation/MobileBottomNav";
-import { subscribeAccountInvalidation } from "@/lib/account/client-cache";
+import {
+  readStoredAccountUser,
+  subscribeAccountInvalidation,
+  writeStoredAccountUser,
+} from "@/lib/account/client-cache";
 import { ensureBrowserSession } from "@/lib/account/session-bootstrap";
 
 /**
- * Cache module : survit aux remounts soft-refresh Next.
- * Session d'abord (POST /api/auth/session), puis /api/account/me en readonly.
+ * Cache module : survit aux navigations client.
+ * + sessionStorage : survit au refresh hard (même onglet).
  */
 let cachedUser: AccountDockUser | null | undefined;
 let inflight: Promise<AccountDockUser | null> | null = null;
 
-async function loadAccountUser(force = false): Promise<AccountDockUser | null> {
-  if (!force && cachedUser !== undefined) return cachedUser;
+function hydrateFromSession(): AccountDockUser | null | undefined {
+  if (cachedUser !== undefined) return cachedUser;
+  const stored = readStoredAccountUser();
+  if (stored !== undefined) cachedUser = stored;
+  return cachedUser;
+}
+
+async function revalidateAccountUser(): Promise<AccountDockUser | null> {
   if (inflight) return inflight;
 
   inflight = (async () => {
@@ -30,20 +40,35 @@ async function loadAccountUser(force = false): Promise<AccountDockUser | null> {
       });
       if (!response.ok) {
         cachedUser = null;
+        writeStoredAccountUser(null);
         return null;
       }
       const data = (await response.json()) as { user: AccountDockUser | null };
       cachedUser = data.user;
+      writeStoredAccountUser(cachedUser);
       return cachedUser;
     } catch {
-      cachedUser = null;
-      return null;
+      // Garde le cache existant si le réseau tombe.
+      return cachedUser ?? null;
     } finally {
       inflight = null;
     }
   })();
 
   return inflight;
+}
+
+async function loadAccountUser(force = false): Promise<AccountDockUser | null> {
+  if (!force) {
+    const hydrated = hydrateFromSession();
+    if (hydrated !== undefined) {
+      // Stale-while-revalidate : UI immédiate, refresh en fond.
+      void revalidateAccountUser();
+      return hydrated;
+    }
+  }
+
+  return revalidateAccountUser();
 }
 
 export default function AccountDockClient() {
@@ -53,6 +78,9 @@ export default function AccountDockClient() {
 
   useEffect(() => {
     let cancelled = false;
+
+    const hydrated = hydrateFromSession();
+    if (hydrated !== undefined) setUser(hydrated);
 
     void loadAccountUser().then((next) => {
       if (!cancelled) setUser(next);
