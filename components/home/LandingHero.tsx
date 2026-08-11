@@ -62,7 +62,7 @@ export default function LandingHero() {
   );
 
   const section = (
-    <section className="relative mb-16 w-full overflow-hidden">
+    <section className="relative mb-12 w-full overflow-hidden sm:mb-16">
       {/* background image */}
       <div
         aria-hidden

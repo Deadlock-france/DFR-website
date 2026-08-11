@@ -24,7 +24,7 @@ export default function ShowmatchMatchDetail({
   const colorB = teamB.side === "sapphire" ? "text-[#7ec0f0]" : "text-[#f0b35a]";
 
   return (
-    <div className="mx-auto flex w-full max-w-7xl flex-col gap-8 px-3 pb-20 pt-4 sm:px-6">
+    <div className="flex w-full flex-col gap-8 px-4 pb-20 pt-4 sm:px-5 lg:px-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link
           href="/showmatch"

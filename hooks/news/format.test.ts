@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   formatNewsDate,
   formatPatchNotesContent,
+  formatPatchNotesExcerpt,
   formatPatchNotesTitle,
   formatShortNewsDate,
 } from "./format";
@@ -150,6 +151,12 @@ describe("formatPatchNotesContent", () => {
     expect(
       formatPatchNotesContent("[url=https://playdeadlock.com]Site[/url]"),
     ).toContain('<a href="https://playdeadlock.com" target="_blank">Site</a>');
+  });
+
+  it("retire les ancres de l'extrait carte (évite <a> imbriqués)", () => {
+    expect(
+      formatPatchNotesExcerpt("[url=https://playdeadlock.com]Site[/url]"),
+    ).toBe("Site");
   });
 
   it("transforme les sauts de ligne en <br>", () => {

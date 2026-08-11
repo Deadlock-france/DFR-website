@@ -6,6 +6,7 @@ import {
   ChevronRight,
   ChevronUp,
   ExternalLink,
+  Gamepad2,
   Heart,
   Home,
   Newspaper,
@@ -14,7 +15,8 @@ import {
 import { useReducedMotion } from "motion/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useSyncExternalStore, type ComponentType } from "react";
+import { Suspense, useSyncExternalStore, type ComponentType } from "react";
+
 import NavLink from "@/components/motion/NavLink";
 import { Button, buttonVariants } from "@/components/shadcn/button";
 import { Separator } from "@/components/shadcn/separator";
@@ -25,6 +27,7 @@ import {
 } from "@/components/shadcn/tooltip";
 import { DiscordIcon, XIcon } from "@/components/social/SocialIcons";
 import SidebarSocialCard from "@/components/social/SidebarSocialCard";
+import { useHydrated } from "@/hooks/use-hydrated";
 import {
   NAV_WIDTH_TRANSITION,
   navDockClassName,
@@ -50,15 +53,15 @@ import {
   TWITTER_URL,
 } from "@/lib/social/links";
 import { cn } from "@/lib/utils";
-import { useHydrated } from "@/hooks/use-hydrated";
 
-const NAV_ITEMS: ReadonlyArray<{ href: string; label: string; icon: LucideIcon }> = [
+const NAV_ITEMS: ReadonlyArray<{
+  href: string;
+  label: string;
+  icon: LucideIcon;
+}> = [
   { href: "/", label: "Accueil", icon: Home },
   { href: "/patch-notes", label: "Patch notes", icon: Newspaper },
-  //{ href: "/showmatch", label: "Showmatch", icon: Gamepad2 },
-  //{ href: "/team", label: "Équipe", icon: Users },
-  //{ href: "/items", label: "Items", icon: ShoppingBag },
-  //{ href: "/unban", label: "Déban", icon: Gavel },
+  { href: "/showmatch", label: "Showmatch", icon: Gamepad2 },
 ];
 
 const SOCIAL_LINKS: ReadonlyArray<{
@@ -93,14 +96,12 @@ function SidebarIconButton({
   label,
   onClick,
   expanded,
-  enlargedOnMobile = false,
   children,
 }: {
   title: string;
   label: string;
   onClick: () => void;
   expanded: boolean;
-  enlargedOnMobile?: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -108,16 +109,13 @@ function SidebarIconButton({
       <TooltipTrigger
         render={
           <Button
+            type="button"
             variant="outline"
-            size="icon-sm"
+            size="icon"
             onClick={onClick}
             aria-label={label}
             aria-expanded={expanded}
-            className={cn(
-              "rounded-xl",
-              navIconButtonClassName,
-              enlargedOnMobile && "max-md:size-11 max-md:[&_svg]:size-5",
-            )}
+            className={cn("rounded-xl", navIconButtonClassName)}
           />
         }
       >
@@ -153,17 +151,15 @@ function SocialIconLinks({
                 rel="noopener noreferrer"
                 aria-label={label}
                 className={cn(
-                  buttonVariants({ variant: "outline", size: "icon-sm" }),
-                  "rounded-[14px] max-md:h-11 max-md:[&_svg]:size-5",
-                  orientation === "horizontal"
-                    ? "h-9 flex-1"
-                    : "max-md:size-11",
+                  buttonVariants({ variant: "outline", size: "icon" }),
+                  "rounded-[14px]",
+                  orientation === "horizontal" ? "h-10 flex-1" : undefined,
                   navIconButtonClassName,
                 )}
               />
             }
           >
-            <Icon className="size-[18px] max-md:size-5" />
+            <Icon className="size-5" />
           </TooltipTrigger>
           <TooltipContent side={tooltipSide}>{label}</TooltipContent>
         </Tooltip>
@@ -172,7 +168,7 @@ function SocialIconLinks({
   );
 }
 
-export default function AppSidebar() {
+function AppSidebarInner() {
   const pathname = usePathname();
   const reduceMotion = useReducedMotion();
   const open = useSyncExternalStore(
@@ -196,66 +192,39 @@ export default function AppSidebar() {
   }
 
   const collapsed = !open;
-  const mobileExpanded = !collapsed;
   // L'état réel n'est connu qu'après lecture du localStorage : sans ce garde,
   // le passage à l'état replié est joué comme une transition à chaque chargement.
   const animated = hydrated && !reduceMotion;
 
-  // La sidebar fait partie du châssis permanent : pas d'animation d'entrée,
-  // sinon elle rejoue à chaque chargement comme un changement de page.
   return (
-    <>
-      {mobileExpanded ? (
-        <button
-          type="button"
-          aria-label="Fermer le menu"
-          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-[2px] md:hidden"
-          onClick={toggleSidebar}
-        />
-      ) : null}
-
-      <div
-        className={cn(
-          "sticky top-0 shrink-0",
-          collapsed
-            ? "w-[76px] max-md:w-[88px]"
-            : "z-50 w-full max-md:fixed max-md:inset-y-0 max-md:left-0 md:w-[252px]",
-        )}
-        style={{
-          height: "100vh",
-          paddingTop: 6,
-          paddingBottom: 6,
-          paddingLeft: 12,
-          paddingRight: collapsed ? 8 : 4,
-          transition: animated ? `width ${NAV_WIDTH_TRANSITION}` : undefined,
-        }}
-      >
-        <NavDock className={!collapsed ? "w-full" : undefined}>
+    <div
+      className={cn(
+        "sticky top-0 hidden shrink-0 md:block",
+        collapsed ? "w-[76px]" : "w-[252px]",
+      )}
+      style={{
+        height: "100vh",
+        paddingTop: 6,
+        paddingBottom: 6,
+        paddingLeft: 12,
+        paddingRight: collapsed ? 8 : 4,
+        transition: animated ? `width ${NAV_WIDTH_TRANSITION}` : undefined,
+      }}
+    >
+      <NavDock className={!collapsed ? "w-full" : undefined}>
         <div
           className={cn(
             "flex min-h-0 flex-1 flex-col",
-            collapsed ? "p-2.5" : "p-3 max-md:p-5",
+            collapsed ? "p-2.5" : "p-3",
           )}
         >
-          <div
-            className={cn(
-              "mb-4 flex min-h-10 items-center gap-2.5",
-              !collapsed && "max-md:mb-6 max-md:min-h-14 max-md:gap-3.5",
-            )}
-          >
+          <div className="mb-4 flex min-h-10 items-center gap-2.5">
             <Link
               href="/"
-              className={cn(
-                "flex min-w-0 flex-1 items-center gap-2.5 text-inherit no-underline",
-                !collapsed && "max-md:gap-4",
-              )}
+              className="flex min-w-0 flex-1 items-center gap-2.5 text-inherit no-underline"
             >
               <div
-                className={cn(
-                  "size-[38px] shrink-0 overflow-hidden rounded-[10px] border shadow-[0_2px_8px_rgba(0,0,0,0.25)]",
-                  !collapsed && "max-md:size-[52px] max-md:rounded-[14px]",
-                  collapsed && "max-md:size-[44px] max-md:rounded-xl",
-                )}
+                className="size-[38px] shrink-0 overflow-hidden rounded-[10px] border shadow-[0_2px_8px_rgba(0,0,0,0.25)]"
                 style={{ borderColor: "#FFFFFF01" }}
               >
                 <video
@@ -266,8 +235,14 @@ export default function AppSidebar() {
                   aria-label="Logo Deadlock France"
                   className="block size-full object-cover"
                 >
-                  <source src="/assets/animated-logo-CXGSyufY.webm" type="video/webm" />
-                  <source src="/assets/animated-logo-TlyMLKqV.mp4" type="video/mp4" />
+                  <source
+                    src="/assets/animated-logo-CXGSyufY.webm"
+                    type="video/webm"
+                  />
+                  <source
+                    src="/assets/animated-logo-TlyMLKqV.mp4"
+                    type="video/mp4"
+                  />
                 </video>
               </div>
 
@@ -281,12 +256,7 @@ export default function AppSidebar() {
                   pointerEvents: collapsed ? "none" : "auto",
                 }}
               >
-                <p
-                  className={cn(
-                    "truncate leading-tight font-bold tracking-tight text-foreground",
-                    collapsed ? "text-sm" : "text-sm max-md:text-lg",
-                  )}
-                >
+                <p className="truncate text-sm leading-tight font-bold tracking-tight text-foreground">
                   Deadlock Actus
                 </p>
               </div>
@@ -295,7 +265,7 @@ export default function AppSidebar() {
             <div
               className={cn(
                 "shrink-0 overflow-hidden",
-                collapsed ? "w-0 opacity-0" : "w-8 max-md:w-11 opacity-100",
+                collapsed ? "w-0 opacity-0" : "w-8 opacity-100",
               )}
               style={{
                 transition: animated
@@ -309,9 +279,8 @@ export default function AppSidebar() {
                 label="Réduire le menu"
                 onClick={toggleSidebar}
                 expanded={open}
-                enlargedOnMobile
               >
-                <ChevronLeft className="max-md:size-5" size={18} />
+                <ChevronLeft size={20} />
               </SidebarIconButton>
             </div>
           </div>
@@ -323,9 +292,8 @@ export default function AppSidebar() {
                 label="Ouvrir le menu"
                 onClick={toggleSidebar}
                 expanded={open}
-                enlargedOnMobile
               >
-                <ChevronRight className="max-md:size-5" size={18} />
+                <ChevronRight size={20} />
               </SidebarIconButton>
             </div>
           ) : null}
@@ -341,12 +309,7 @@ export default function AppSidebar() {
                 : undefined,
             }}
           >
-            <p
-              className={cn(
-                "block px-1.5 font-bold tracking-[0.14em] text-muted-foreground uppercase",
-                collapsed ? "text-[0.65rem]" : "text-[0.65rem] max-md:text-xs",
-              )}
-            >
+            <p className="block px-1.5 text-[0.65rem] font-bold tracking-[0.14em] text-muted-foreground uppercase">
               Menu
             </p>
           </div>
@@ -355,7 +318,7 @@ export default function AppSidebar() {
             aria-label="Sections"
             className={cn(
               "flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto",
-              collapsed && "-mx-0.5"
+              collapsed && "-mx-0.5",
             )}
           >
             {NAV_ITEMS.map(({ href, label, icon }) => (
@@ -366,7 +329,6 @@ export default function AppSidebar() {
                 icon={icon}
                 active={isActivePath(pathname, href)}
                 collapsed={collapsed}
-                enlargedOnMobile
                 orientation="vertical"
                 animated={animated}
               />
@@ -387,13 +349,14 @@ export default function AppSidebar() {
             {!collapsed ? (
               <>
                 <div className="flex items-center justify-between gap-1 px-1.5">
-                  <p className="font-bold tracking-[0.14em] text-muted-foreground uppercase text-[0.65rem] max-md:text-xs">
+                  <p className="text-[0.65rem] font-bold tracking-[0.14em] text-muted-foreground uppercase">
                     Réseaux
                   </p>
                   <Tooltip>
                     <TooltipTrigger
                       render={
                         <Button
+                          type="button"
                           variant="ghost"
                           size="icon-sm"
                           onClick={toggleSocialMinified}
@@ -403,14 +366,14 @@ export default function AppSidebar() {
                               : "Réduire les réseaux"
                           }
                           aria-expanded={!socialMinified}
-                          className="size-6 rounded-lg text-muted-foreground hover:text-foreground"
+                          className="size-8 rounded-lg text-muted-foreground hover:text-foreground"
                         />
                       }
                     >
                       {socialMinified ? (
-                        <ChevronUp size={14} />
+                        <ChevronUp size={16} />
                       ) : (
-                        <ChevronDown size={14} />
+                        <ChevronDown size={16} />
                       )}
                     </TooltipTrigger>
                     <TooltipContent side="right">
@@ -441,14 +404,14 @@ export default function AppSidebar() {
                       rel="noopener noreferrer"
                       aria-label="Faire un don"
                       className={cn(
-                        buttonVariants({ variant: "outline", size: "icon-sm" }),
-                        "rounded-[14px] max-md:size-11 max-md:[&_svg]:size-5",
+                        buttonVariants({ variant: "outline", size: "icon" }),
+                        "rounded-[14px]",
                         navIconButtonClassName,
                       )}
                     />
                   }
                 >
-                  <Heart className="max-md:size-5" size={18} />
+                  <Heart size={20} />
                 </TooltipTrigger>
                 <TooltipContent side="right">Soutenir le projet</TooltipContent>
               </Tooltip>
@@ -459,11 +422,11 @@ export default function AppSidebar() {
                 rel="noopener noreferrer"
                 className={cn(
                   buttonVariants({ size: "sm" }),
-                  "h-9 w-full gap-1.5 border-0 px-2.5 text-[0.8125rem] font-semibold text-white shadow-none transition-[filter] hover:brightness-110 max-md:h-11 max-md:text-base",
+                  "h-10 w-full gap-1.5 border-0 px-2.5 text-[0.8125rem] font-semibold text-white shadow-none transition-[filter] hover:brightness-110",
                 )}
                 style={{ backgroundColor: "#4A9B7F" }}
               >
-                <Heart className="size-3.5 max-md:size-4" />
+                <Heart className="size-4" />
                 Soutenir le projet
               </a>
             )}
@@ -478,14 +441,14 @@ export default function AppSidebar() {
                       rel="noopener noreferrer"
                       aria-label="Ouvrir la page Steam"
                       className={cn(
-                        buttonVariants({ variant: "outline", size: "icon-sm" }),
-                        "rounded-[14px] max-md:size-11 max-md:[&_svg]:size-5",
+                        buttonVariants({ variant: "outline", size: "icon" }),
+                        "rounded-[14px]",
                         navIconButtonClassName,
                       )}
                     />
                   }
                 >
-                  <ExternalLink className="max-md:size-5" size={18} />
+                  <ExternalLink size={20} />
                 </TooltipTrigger>
                 <TooltipContent side="right">Steam</TooltipContent>
               </Tooltip>
@@ -495,19 +458,34 @@ export default function AppSidebar() {
                 target="_blank"
                 rel="noopener noreferrer"
                 className={cn(
-                  "flex items-center justify-between rounded-[10px] border px-2.5 py-2 text-[0.8125rem] font-medium text-muted-foreground no-underline transition-[background-color,color]",
+                  "flex items-center justify-between rounded-[10px] border px-2.5 py-2.5 text-[0.8125rem] font-medium text-muted-foreground no-underline transition-[background-color,color]",
                   navIconButtonClassName,
-                  "max-md:px-3.5 max-md:py-3 max-md:text-base",
                 )}
               >
                 Steam Store
-                <ExternalLink className="opacity-70 max-md:size-[18px]" size={15} />
+                <ExternalLink className="opacity-70" size={16} />
               </a>
             )}
           </div>
         </div>
-        </NavDock>
-      </div>
-    </>
+      </NavDock>
+    </div>
+  );
+}
+
+/** usePathname exige un Suspense parent avec Cache Components. */
+export default function AppSidebar() {
+  return (
+    <Suspense
+      fallback={
+        <div
+          className="sticky top-0 z-30 hidden h-screen shrink-0 md:block"
+          style={{ width: 76 }}
+          aria-hidden
+        />
+      }
+    >
+      <AppSidebarInner />
+    </Suspense>
   );
 }

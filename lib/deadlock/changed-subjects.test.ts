@@ -148,7 +148,7 @@ describe("extractChangedReferencesFromItem", () => {
       ["Yamato", "Yamato", 27],
     ].map(([en, fr, id]) => ({
       kind: "hero" as const,
-      id,
+      id: id as number,
       className: `hero_${String(en).toLowerCase()}`,
       name: String(fr),
       aliases: en === fr ? undefined : [String(en)],

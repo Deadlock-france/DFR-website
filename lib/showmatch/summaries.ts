@@ -12,6 +12,14 @@ export type ShowmatchHeroPreview = {
   heroImageUrl: string;
 };
 
+/** MVP d’une game (1 par match dans un lobby BO3). */
+export type ShowmatchMvpPreview = {
+  gameNumber: number;
+  name: string;
+  heroImageUrl: string | null;
+  side: ShowmatchSide | null;
+};
+
 /** Résumé listable (page index) — une carte par série/lobby. */
 export type ShowmatchSeriesSummary = {
   id: string;
@@ -34,8 +42,11 @@ export type ShowmatchSeriesSummary = {
   teamBHeroes: ShowmatchHeroPreview[];
   winnerTeamKey: ShowmatchTeamKey | null;
   winnerName: string | null;
+  /** @deprecated Préférer `mvps` (dernier match / preview). */
   mvpName: string | null;
+  /** @deprecated Préférer `mvps`. */
   mvpHeroImageUrl: string | null;
+  mvps: ShowmatchMvpPreview[];
   gameCount: number;
   streamUrls: string[];
   sideMappingAssumed: boolean;
@@ -68,15 +79,55 @@ function pickPreviewGame(
   );
 }
 
+function collectMvps(series: ShowmatchSeriesView): ShowmatchMvpPreview[] {
+  return [...series.games]
+    .sort((a, b) => a.gameNumber - b.gameNumber)
+    .map((game) => {
+      const mvpRow = game.teams
+        .flatMap((t) => t.players)
+        .find((row) => row.isMvp);
+
+      if (mvpRow) {
+        return {
+          gameNumber: game.gameNumber,
+          name: mvpRow.player.displayName,
+          heroImageUrl: mvpRow.heroImageUrl,
+          side: mvpRow.side,
+        };
+      }
+
+      if (!game.mvp) return null;
+
+      const sideFromTeams =
+        game.teams.find((t) =>
+          t.players.some((p) => p.player.id === game.mvp!.id),
+        )?.side ??
+        game.teams.find((t) =>
+          t.roster.some((p) => p.id === game.mvp!.id),
+        )?.side ??
+        null;
+
+      return {
+        gameNumber: game.gameNumber,
+        name: game.mvp.displayName,
+        heroImageUrl: null,
+        side: sideFromTeams,
+      };
+    })
+    .filter((mvp): mvp is ShowmatchMvpPreview => mvp != null);
+}
+
 export function toSeriesSummary(
   event: ShowmatchEventView,
   series: ShowmatchSeriesView,
 ): ShowmatchSeriesSummary {
   const [teamA, teamB] = series.teams;
   const preview = pickPreviewGame(series);
-  const mvpRow = preview?.teams
-    .flatMap((t) => t.players)
-    .find((row) => row.isMvp);
+  const mvps = collectMvps(series);
+  const previewMvp =
+    mvps.find((m) => m.gameNumber === preview?.gameNumber) ??
+    mvps[mvps.length - 1] ??
+    null;
 
   let winnerTeamKey: ShowmatchTeamKey | null = null;
   let winnerName: string | null = null;
@@ -123,8 +174,9 @@ export function toSeriesSummary(
     teamBHeroes: heroPreviews(playersForKey(teamB.teamKey)),
     winnerTeamKey,
     winnerName,
-    mvpName: mvpRow?.player.displayName ?? preview?.mvp?.displayName ?? null,
-    mvpHeroImageUrl: mvpRow?.heroImageUrl ?? null,
+    mvpName: previewMvp?.name ?? null,
+    mvpHeroImageUrl: previewMvp?.heroImageUrl ?? null,
+    mvps,
     gameCount: series.games.length,
     streamUrls: series.streamUrls,
     sideMappingAssumed: series.games.some(

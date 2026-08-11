@@ -12,8 +12,17 @@ body {
   margin: 0;
   padding: 0;
   min-height: 100%;
+  min-height: 100dvh;
   background-color: var(--background);
   color: var(--foreground);
+}
+
+/* Décalage dynamique barre Safari / clavier (mis à jour côté client). */
+:root {
+  --mobile-vv-bottom: 0px;
+  --mobile-nav-clearance: calc(
+    4.75rem + env(safe-area-inset-bottom, 0px) + var(--mobile-vv-bottom)
+  );
 }
 
 a {

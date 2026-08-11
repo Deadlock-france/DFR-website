@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
 import type { DeadlockReference } from "@/lib/deadlock/types";
 import type { SteamNewsItem } from "@/lib/steam/types";
 import {
-  formatPatchNotesContent,
+  formatPatchNotesExcerpt,
   formatShortNewsDate,
   formatPatchNotesTitle,
 } from "@/hooks/news/format";
@@ -27,42 +27,36 @@ function CardShell({
 }) {
   const reduceMotion = useReducedMotion();
 
-  const inner = (
-    <AppLink
-      href={`/patch-notes/${item.gid}`}
-      className={cn(
-        "group/news relative block h-full overflow-hidden rounded-2xl border text-inherit no-underline outline-none transition-[border-color,box-shadow] duration-300 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-        "hover:border-b-emerald-300 hover:shadow-md",
-        className,
-      )}
-      style={
-        {
-          borderColor: "#1f2937",
-          ...surfaceStyle,
-        } as CSSProperties
-      }
-    >
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover/news:opacity-100"
-        style={{
-          background:
-            "linear-gradient(180deg, rgba(74, 155, 127, 0.1) 0%, transparent 100%)",
-        }}
-      />
-      <div className="relative z-1">{children}</div>
-    </AppLink>
-  );
-
-  if (reduceMotion) return inner;
-
   return (
     <motion.div
       className="h-full"
-      whileHover={{ y: -3 }}
+      whileHover={reduceMotion ? undefined : { y: -3 }}
       transition={{ duration: 0.22, ease: [0.22, 1, 0.36, 1] }}
     >
-      {inner}
+      <AppLink
+        href={`/patch-notes/${item.gid}`}
+        className={cn(
+          "group/news relative block h-full overflow-hidden rounded-2xl border text-inherit no-underline outline-none transition-[border-color,box-shadow] duration-300 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+          "hover:border-b-emerald-300 hover:shadow-md",
+          className,
+        )}
+        style={
+          {
+            borderColor: "#1f2937",
+            ...surfaceStyle,
+          } as CSSProperties
+        }
+      >
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-300 group-hover/news:opacity-100"
+          style={{
+            background:
+              "linear-gradient(180deg, rgba(74, 155, 127, 0.1) 0%, transparent 100%)",
+          }}
+        />
+        <div className="relative z-1">{children}</div>
+      </AppLink>
     </motion.div>
   );
 }
@@ -126,7 +120,7 @@ export function NewsLeadCard({
         <div
           className="mt-4 line-clamp-5 flex-1 text-sm leading-relaxed text-muted-foreground sm:line-clamp-6"
           dangerouslySetInnerHTML={{
-            __html: formatPatchNotesContent(item.contents),
+            __html: formatPatchNotesExcerpt(item.contents),
           }}
           style={{ maxHeight: "8em", overflow: "hidden" }}
         />
@@ -173,7 +167,7 @@ export function NewsCompactCard({
         <div
           className="mt-2 line-clamp-3 text-sm leading-relaxed text-muted-foreground"
           dangerouslySetInnerHTML={{
-            __html: formatPatchNotesContent(item.contents),
+            __html: formatPatchNotesExcerpt(item.contents),
           }}
           style={{ maxHeight: "5em", overflow: "hidden" }}
         />

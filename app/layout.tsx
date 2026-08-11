@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import { TooltipProvider } from "@/components/shadcn/tooltip"
 import "./globals.css";
@@ -14,6 +14,13 @@ const colus = localFont({
 export const metadata: Metadata = {
   title: "Deadlock France",
   description: "Deadlock France",
+};
+
+/** Requis pour que env(safe-area-inset-*) soit non nul sur iOS Safari. */
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({

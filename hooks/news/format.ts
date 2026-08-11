@@ -75,6 +75,18 @@ function formatPatchNotesContent(content: string): string {
   return polishPatchNotesHtml(bbcodeToHtml(normalizeBbcodeInlineTags(content)));
 }
 
+/**
+ * Extrait pour les cartes listées dans un <a> parent : retire les ancres
+ * imbriquées (sinon le navigateur casse le DOM → mismatch d'hydratation).
+ */
+function formatPatchNotesExcerpt(content: string): string {
+  return formatPatchNotesContent(content)
+    .replace(/<a\b[^>]*>/gi, "")
+    .replace(/<\/a>/gi, "")
+    .replace(/<figure\b[^>]*>[\s\S]*?<\/figure>/gi, "")
+    .replace(/<img\b[^>]*>/gi, "");
+}
+
 function formatShortNewsDate(timestamp: number): string {
   return new Intl.DateTimeFormat("fr-FR", {
     day: "numeric",
@@ -97,6 +109,7 @@ function formatNewsDate(timestamp: number): string {
 
 export {
   formatPatchNotesContent,
+  formatPatchNotesExcerpt,
   formatShortNewsDate,
   formatPatchNotesTitle,
   formatNewsDate,

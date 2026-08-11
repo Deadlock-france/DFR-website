@@ -19,7 +19,6 @@ interface NavLinkProps {
   icon: LucideIcon;
   active: boolean;
   collapsed?: boolean;
-  enlargedOnMobile?: boolean;
   orientation?: "horizontal" | "vertical";
   animated?: boolean;
 }
@@ -30,7 +29,6 @@ export default function NavLink({
   icon: Icon,
   active,
   collapsed = false,
-  enlargedOnMobile = false,
   orientation = "horizontal",
   animated = true,
 }: NavLinkProps) {
@@ -39,18 +37,10 @@ export default function NavLink({
   const animateLabel = animated && !reduceMotion;
 
   const iconSlot = (
-    <span
-      className={cn(
-        "relative grid h-9 w-9 shrink-0 place-items-center",
-        enlargedOnMobile && "max-md:h-11 max-md:w-11",
-      )}
-    >
+    <span className="relative grid size-10 shrink-0 place-items-center">
       {active ? (
         <span
-          className={cn(
-            "absolute inset-0 z-0 rounded-[14px] border",
-            enlargedOnMobile && "max-md:rounded-[18px]",
-          )}
+          className="absolute inset-0 z-0 rounded-[14px] border"
           style={{
             backgroundColor: "#3A7D6509",
             borderColor: "#3A7D6504",
@@ -59,12 +49,8 @@ export default function NavLink({
       ) : null}
 
       <Icon
-        className={cn(
-          "relative z-1",
-          active && "text-[#6BB89A]",
-          enlargedOnMobile && "max-md:size-[22px]",
-        )}
-        size={19}
+        className={cn("relative z-1 size-5", active && "text-[#6BB89A]")}
+        size={20}
       />
     </span>
   );
@@ -75,12 +61,7 @@ export default function NavLink({
     active ? "font-semibold text-foreground" : "text-muted-foreground",
     vertical
       ? cn(
-          "min-h-11 w-full",
-          enlargedOnMobile &&
-            cn(
-              "max-md:min-h-12",
-              !collapsed && "max-md:min-h-14 max-md:gap-3 max-md:px-3 max-md:text-base",
-            ),
+          "min-h-12 w-full",
           collapsed ? "justify-center px-1" : "justify-start gap-2.5 px-2.5",
         )
       : "justify-center px-2.5 sm:px-3.5",

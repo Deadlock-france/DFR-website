@@ -3,6 +3,7 @@ import Link from "next/link";
 import RankBadge from "@/components/showmatch/RankBadge";
 import type {
   ShowmatchHeroPreview,
+  ShowmatchMvpPreview,
   ShowmatchSeriesSummary,
 } from "@/lib/showmatch/summaries";
 import {
@@ -29,10 +30,12 @@ function HeroStrip({
       ? "border-[#a66b2a] shadow-[0_0_0_1px_rgba(232,161,74,0.25)]"
       : "border-[#3d6f9e] shadow-[0_0_0_1px_rgba(110,176,232,0.25)]";
 
+  if (heroes.length === 0) return null;
+
   return (
     <div
       className={cn(
-        "flex gap-1",
+        "flex gap-1 sm:gap-1.5",
         align === "end" ? "justify-end" : "justify-start",
       )}
     >
@@ -43,14 +46,58 @@ function HeroStrip({
           src={hero.heroImageUrl}
           alt={hero.heroName}
           title={hero.heroName}
-          width={44}
-          height={58}
+          width={52}
+          height={68}
           className={cn(
-            "h-[58px] w-11 border object-cover brightness-95 transition-[filter] group-hover:brightness-110",
+            "h-[68px] w-[52px] border object-cover brightness-95 transition-[filter] group-hover:brightness-110",
             frame,
           )}
         />
       ))}
+    </div>
+  );
+}
+
+function mvpSideTone(side: ShowmatchSide | null | undefined) {
+  if (side === "amber") return "text-[#f0b35a]";
+  if (side === "sapphire") return "text-[#7ec0f0]";
+  return "text-[#c9a24a]";
+}
+
+function MvpChip({
+  mvp,
+  showGame,
+}: {
+  mvp: ShowmatchMvpPreview;
+  showGame: boolean;
+}) {
+  const sideClass = mvpSideTone(mvp.side);
+
+  return (
+    <div className="inline-flex min-w-0 items-center gap-2">
+      {mvp.heroImageUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={mvp.heroImageUrl}
+          alt=""
+          width={24}
+          height={32}
+          className="h-8 w-6 border border-[#2a3538] object-cover"
+        />
+      ) : null}
+      <div className="min-w-0 leading-tight">
+        <p
+          className={cn(
+            "text-[10px] font-semibold uppercase tracking-[0.16em]",
+            sideClass,
+          )}
+        >
+          {showGame ? `MVP G${mvp.gameNumber}` : "MVP"}
+        </p>
+        <p className="truncate text-sm font-medium text-foreground/90">
+          {mvp.name}
+        </p>
+      </div>
     </div>
   );
 }
@@ -82,7 +129,7 @@ function TeamBlock({
   return (
     <div
       className={cn(
-        "relative flex min-w-0 flex-col gap-3 overflow-hidden border-y px-4 py-4 sm:px-5",
+        "relative flex min-w-0 flex-col gap-4 overflow-hidden border-y px-4 py-5 sm:px-5 sm:py-6 lg:px-6",
         wash,
         edge,
         mirror ? "items-end text-right sm:border-l-0" : "items-start text-left",
@@ -98,7 +145,7 @@ function TeamBlock({
 
       <div
         className={cn(
-          "relative z-1 flex flex-wrap items-center gap-2",
+          "relative z-1 flex w-full flex-wrap items-center gap-2",
           mirror && "flex-row-reverse",
         )}
       >
@@ -127,7 +174,7 @@ function TeamBlock({
 
       <dl
         className={cn(
-          "relative z-1 flex flex-wrap gap-x-4 gap-y-1 text-xs uppercase tracking-wide text-[#b7c4c8] sm:text-[13px]",
+          "relative z-1 flex w-full flex-wrap gap-x-4 gap-y-1 text-xs uppercase tracking-wide text-[#b7c4c8] sm:text-[13px]",
           mirror && "justify-end",
         )}
       >
@@ -158,7 +205,20 @@ function SeriesSummaryCard({ series }: { series: ShowmatchSeriesSummary }) {
   const timeIso = series.lastGameStartedAt ?? series.scheduledAt;
   const sideA = series.teamASide ?? "amber";
   const sideB = series.teamBSide ?? "sapphire";
-
+  const mvps =
+    series.mvps.length > 0
+      ? series.mvps
+      : series.mvpName
+        ? [
+            {
+              gameNumber: 1,
+              name: series.mvpName,
+              heroImageUrl: series.mvpHeroImageUrl,
+              side: null,
+            } satisfies ShowmatchMvpPreview,
+          ]
+        : [];
+  const showGameLabel = series.gameCount > 1 || mvps.length > 1;
 
   return (
     <li>
@@ -201,7 +261,7 @@ function SeriesSummaryCard({ series }: { series: ShowmatchSeriesSummary }) {
           </p>
         </div>
 
-        <div className="grid sm:grid-cols-[1fr_5.5rem_1fr]">
+        <div className="grid sm:grid-cols-[1fr_6.5rem_1fr] lg:grid-cols-[1fr_7.5rem_1fr]">
           <TeamBlock
             name={series.teamAName}
             side={sideA}
@@ -211,11 +271,11 @@ function SeriesSummaryCard({ series }: { series: ShowmatchSeriesSummary }) {
             mirror
           />
 
-          <div className="relative flex flex-col items-center justify-center gap-1 border-y border-[#2a3538] bg-[linear-gradient(180deg,#141c1e,#0e1517)] px-2 py-4">
-            <span className="font-colus text-sm uppercase tracking-[0.28em] text-[#6d7e82]">
+          <div className="relative flex flex-col items-center justify-center gap-1.5 border-y border-[#2a3538] bg-[linear-gradient(180deg,#141c1e,#0e1517)] px-2 py-5 sm:py-6">
+            <span className="font-colus text-sm uppercase tracking-[0.28em] text-[#6d7e82] sm:text-base">
               BO3
             </span>
-            <p className="font-colus text-2xl leading-none tracking-wide">
+            <p className="font-colus text-3xl leading-none tracking-wide sm:text-4xl">
               <span
                 className={cn(
                   "tabular-nums",
@@ -246,26 +306,19 @@ function SeriesSummaryCard({ series }: { series: ShowmatchSeriesSummary }) {
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#2a3538] bg-[#0a1012] px-4 py-3 sm:px-5">
-          <div className="inline-flex items-center gap-2.5">
-            {series.mvpHeroImageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={series.mvpHeroImageUrl}
-                alt=""
-                width={28}
-                height={36}
-                className="h-9 w-7 border border-[#c9a24a]/50 object-cover"
-              />
-            ) : null}
-            <div className="leading-tight">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#c9a24a]">
-                MVP
-              </p>
-              <p className="text-sm font-medium text-foreground/90">
-                {series.mvpName ?? "—"}
-              </p>
+          {mvps.length > 0 ? (
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              {mvps.map((mvp) => (
+                <MvpChip
+                  key={`${mvp.gameNumber}-${mvp.name}`}
+                  mvp={mvp}
+                  showGame={showGameLabel}
+                />
+              ))}
             </div>
-          </div>
+          ) : (
+            <p className="text-sm text-[#7f9094]">MVP -</p>
+          )}
           <span className="text-xs font-semibold uppercase tracking-[0.16em] text-[#58a484] transition-transform group-hover:translate-x-0.5">
             Détail →
           </span>

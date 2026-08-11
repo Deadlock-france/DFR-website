@@ -58,7 +58,7 @@ async function ShowmatchDetailContent({
 
 function ShowmatchDetailFallback() {
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-3 pb-20 pt-10 sm:px-6">
+    <div className="flex w-full flex-col gap-6 px-4 pb-20 pt-10 sm:px-5 lg:px-8">
       <div className="border border-[#2a3538] bg-[#0c1214] px-4 py-10 text-center text-sm text-muted-foreground">
         Chargement de la série…
       </div>

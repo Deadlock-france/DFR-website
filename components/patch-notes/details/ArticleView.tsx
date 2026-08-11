@@ -61,6 +61,13 @@ export default function ArticleView({
           Accueil
         </AppLink>
         <span className="text-muted-foreground">/</span>
+        <AppLink
+          href="/patch-notes"
+          className="text-muted-foreground hover:text-foreground"
+        >
+          Patch notes
+        </AppLink>
+        <span className="text-muted-foreground">/</span>
         <span className="max-w-300px truncate text-foreground">
           {display.title}
         </span>

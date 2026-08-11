@@ -133,7 +133,12 @@ function PlayerColumn({
         </p>
         {row.isMvp ? (
           <span
-            className="text-[9px] font-semibold uppercase tracking-wider text-[#f0c56a]"
+            className={cn(
+              "text-[9px] font-semibold uppercase tracking-wider",
+              row.side === "amber" && "text-[#f0b35a]",
+              row.side === "sapphire" && "text-[#7ec0f0]",
+              !row.side && "text-[#f0c56a]",
+            )}
             title="MVP — plus haut net worth"
           >
             ★ MVP
