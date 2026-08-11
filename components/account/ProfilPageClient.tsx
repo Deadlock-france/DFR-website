@@ -78,14 +78,23 @@ export default function ProfilPageClient() {
     const params = new URLSearchParams(window.location.search);
     const claim = params.get("claim") ?? undefined;
     const claimError = params.get("claim_error") ?? undefined;
+    const heroesFlash = params.get("heroes") ?? undefined;
+    const errorFlash = params.get("error") ?? undefined;
     setFlash({
-      heroes: params.get("heroes") ?? undefined,
-      error: params.get("error") ?? undefined,
+      heroes: heroesFlash,
+      error: errorFlash,
       claim,
       claimError,
     });
 
-    if (claim === "1" || claimError) {
+    // Après save héros / claim : invalider le cache module sinon l'UI reste stale.
+    if (
+      heroesFlash === "1" ||
+      errorFlash === "heroes" ||
+      errorFlash === "hero_dup" ||
+      claim === "1" ||
+      claimError
+    ) {
       cachedPayload = undefined;
       void loadProfil(true).then(setPayload);
     }
@@ -95,7 +104,9 @@ export default function ProfilPageClient() {
       params.has("invited") ||
       params.has("claim") ||
       params.has("claim_error") ||
-      params.has("saved")
+      params.has("saved") ||
+      params.has("heroes") ||
+      params.has("error")
     ) {
       const url = new URL(window.location.href);
       url.searchParams.delete("invite");
@@ -103,6 +114,8 @@ export default function ProfilPageClient() {
       url.searchParams.delete("claim");
       url.searchParams.delete("claim_error");
       url.searchParams.delete("saved");
+      url.searchParams.delete("heroes");
+      url.searchParams.delete("error");
       const qs = url.searchParams.toString();
       window.history.replaceState(
         {},
