@@ -62,8 +62,13 @@ type PopupPosition = {
   left: number;
 };
 
-function MobileBottomNavInner({ user }: { user: AccountDockUser | null }) {
-  const pathname = usePathname();
+function MobileBottomNavInner({
+  user,
+  pathname,
+}: {
+  user: AccountDockUser | null;
+  pathname: string;
+}) {
   const vvBottom = useVisualViewportBottomInset();
   const [popup, setPopup] = useState<PopupKind>(null);
   const [popupPosition, setPopupPosition] = useState<PopupPosition | null>(
@@ -330,14 +335,25 @@ function MobileBottomNavInner({ user }: { user: AccountDockUser | null }) {
 }
 
 /** usePathname exige un Suspense parent avec Cache Components. */
+function MobileBottomNavConnected({
+  user,
+}: {
+  user: AccountDockUser | null;
+}) {
+  const pathname = usePathname();
+  return <MobileBottomNavInner user={user} pathname={pathname} />;
+}
+
 export default function MobileBottomNav({
   user,
 }: {
   user: AccountDockUser | null;
 }) {
   return (
-    <Suspense fallback={null}>
-      <MobileBottomNavInner user={user} />
+    <Suspense
+      fallback={<MobileBottomNavInner user={user} pathname="" />}
+    >
+      <MobileBottomNavConnected user={user} />
     </Suspense>
   );
 }

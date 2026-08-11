@@ -56,6 +56,14 @@ async function loadProfileNames(userId: string): Promise<{
   throw full.error;
 }
 
+function customClaimsGlobalName(identityData: IdentityData): string | null {
+  const claims = identityData.custom_claims;
+  if (!claims || typeof claims !== "object" || Array.isArray(claims)) {
+    return null;
+  }
+  return asString((claims as Record<string, unknown>).global_name);
+}
+
 function collectNameCandidates(
   identityData: IdentityData,
   profile: {
@@ -66,6 +74,7 @@ function collectNameCandidates(
   } | null,
 ): string[] {
   const raw = [
+    customClaimsGlobalName(identityData),
     asString(identityData.full_name),
     asString(identityData.global_name),
     asString(identityData.name),

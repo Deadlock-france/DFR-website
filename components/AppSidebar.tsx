@@ -168,8 +168,72 @@ function SocialIconLinks({
   );
 }
 
-function AppSidebarInner() {
+/** Navigation seule : usePathname peut suspendre sans démonter le chrome. */
+function SidebarNav({
+  collapsed,
+  animated,
+}: {
+  collapsed: boolean;
+  animated: boolean;
+}) {
   const pathname = usePathname();
+
+  return (
+    <nav
+      aria-label="Sections"
+      className={cn(
+        "flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto",
+        collapsed && "-mx-0.5",
+      )}
+    >
+      {NAV_ITEMS.map(({ href, label, icon }) => (
+        <NavLink
+          key={href}
+          href={href}
+          label={label}
+          icon={icon}
+          active={isActivePath(pathname, href)}
+          collapsed={collapsed}
+          orientation="vertical"
+          animated={animated}
+        />
+      ))}
+    </nav>
+  );
+}
+
+function SidebarNavFallback({
+  collapsed,
+  animated,
+}: {
+  collapsed: boolean;
+  animated: boolean;
+}) {
+  return (
+    <nav
+      aria-label="Sections"
+      className={cn(
+        "flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto",
+        collapsed && "-mx-0.5",
+      )}
+    >
+      {NAV_ITEMS.map(({ href, label, icon }) => (
+        <NavLink
+          key={href}
+          href={href}
+          label={label}
+          icon={icon}
+          active={false}
+          collapsed={collapsed}
+          orientation="vertical"
+          animated={animated}
+        />
+      ))}
+    </nav>
+  );
+}
+
+function AppSidebarInner() {
   const reduceMotion = useReducedMotion();
   const open = useSyncExternalStore(
     subscribeSidebarOpen,
@@ -314,26 +378,13 @@ function AppSidebarInner() {
             </p>
           </div>
 
-          <nav
-            aria-label="Sections"
-            className={cn(
-              "flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto",
-              collapsed && "-mx-0.5",
-            )}
+          <Suspense
+            fallback={
+              <SidebarNavFallback collapsed={collapsed} animated={animated} />
+            }
           >
-            {NAV_ITEMS.map(({ href, label, icon }) => (
-              <NavLink
-                key={href}
-                href={href}
-                label={label}
-                icon={icon}
-                active={isActivePath(pathname, href)}
-                collapsed={collapsed}
-                orientation="vertical"
-                animated={animated}
-              />
-            ))}
-          </nav>
+            <SidebarNav collapsed={collapsed} animated={animated} />
+          </Suspense>
 
           <Separator
             className="my-3"
@@ -473,19 +524,10 @@ function AppSidebarInner() {
   );
 }
 
-/** usePathname exige un Suspense parent avec Cache Components. */
+/**
+ * Chrome stable hors Suspense : seul le marquage actif (usePathname) peut
+ * suspendre, sans rejouer open/fermé ni minify des réseaux.
+ */
 export default function AppSidebar() {
-  return (
-    <Suspense
-      fallback={
-        <div
-          className="sticky top-0 z-30 hidden h-screen shrink-0 md:block"
-          style={{ width: 76 }}
-          aria-hidden
-        />
-      }
-    >
-      <AppSidebarInner />
-    </Suspense>
-  );
+  return <AppSidebarInner />;
 }

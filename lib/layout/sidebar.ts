@@ -6,20 +6,46 @@ export const SIDEBAR_WIDTH_COLLAPSED = 76;
 
 export const RIGHT_PANEL_WIDTH = 88;
 
+const SIDEBAR_CHANGE_EVENT = "deadlock-actus-sidebar-change";
+const SOCIAL_MINIFIED_CHANGE_EVENT = "deadlock-actus-social-minified-change";
+
+/**
+ * Cache module : survit aux remounts Suspense / navigation App Router.
+ * Évite le flash open→closed / réseaux→minify en attendant localStorage.
+ */
+let sidebarOpenMemory: boolean | undefined;
+let socialMinifiedMemory: boolean | undefined;
+
+function readStoredFlag(key: string): string | null {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredFlag(key: string, value: boolean): void {
+  try {
+    localStorage.setItem(key, String(value));
+  } catch {
+    // Ignore : la mémoire module reste la source de vérité pour la session.
+  }
+}
+
 export function readSidebarOpen(): boolean {
   if (typeof window === "undefined") return true;
-  const stored = localStorage.getItem(SIDEBAR_STORAGE_KEY);
-  if (stored === null) return true;
-  return stored === "true";
+  if (sidebarOpenMemory !== undefined) return sidebarOpenMemory;
+  const stored = readStoredFlag(SIDEBAR_STORAGE_KEY);
+  const open = stored === null ? true : stored === "true";
+  sidebarOpenMemory = open;
+  return open;
 }
 
 export function writeSidebarOpen(open: boolean): void {
   if (typeof window === "undefined") return;
-  localStorage.setItem(SIDEBAR_STORAGE_KEY, String(open));
+  sidebarOpenMemory = open;
+  writeStoredFlag(SIDEBAR_STORAGE_KEY, open);
 }
-
-const SIDEBAR_CHANGE_EVENT = "deadlock-actus-sidebar-change";
-const SOCIAL_MINIFIED_CHANGE_EVENT = "deadlock-actus-social-minified-change";
 
 /**
  * localStorage n'émet rien pour l'onglet qui écrit : cet évènement permet à
@@ -45,12 +71,16 @@ export function getSidebarOpenServerSnapshot(): boolean {
 /** Carte réseaux repliée : seuls les boutons icônes restent visibles. */
 export function readSocialMinified(): boolean {
   if (typeof window === "undefined") return false;
-  return localStorage.getItem(SOCIAL_MINIFIED_STORAGE_KEY) === "true";
+  if (socialMinifiedMemory !== undefined) return socialMinifiedMemory;
+  const minified = readStoredFlag(SOCIAL_MINIFIED_STORAGE_KEY) === "true";
+  socialMinifiedMemory = minified;
+  return minified;
 }
 
 export function writeSocialMinified(minified: boolean): void {
   if (typeof window === "undefined") return;
-  localStorage.setItem(SOCIAL_MINIFIED_STORAGE_KEY, String(minified));
+  socialMinifiedMemory = minified;
+  writeStoredFlag(SOCIAL_MINIFIED_STORAGE_KEY, minified);
 }
 
 export function subscribeSocialMinified(onChange: () => void): () => void {
@@ -76,4 +106,10 @@ export function getSocialMinifiedServerSnapshot(): boolean {
 export function isActivePath(pathname: string, href: string): boolean {
   if (href === "/") return pathname === "/";
   return pathname.startsWith(href);
+}
+
+/** Reset test-only — ne pas utiliser en prod. */
+export function __resetSidebarMemoryForTests(): void {
+  sidebarOpenMemory = undefined;
+  socialMinifiedMemory = undefined;
 }

@@ -39,18 +39,25 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const { data: claimsData } = await supabase.auth.getClaims();
-    const userId = claimsData?.claims?.sub
-      ? String(claimsData.claims.sub)
-      : null;
-    if (userId) {
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    if (userError) throw userError;
+    const user = userData.user;
+    if (user) {
+      const { syncDiscordProfileFromAuthUser } = await import(
+        "@/lib/account/discord-profile-sync"
+      );
+      await syncDiscordProfileFromAuthUser(user);
+
       const { claimShowmatchPlayerForUser } = await import(
         "@/lib/account/showmatch-claim"
       );
-      await claimShowmatchPlayerForUser(userId);
+      await claimShowmatchPlayerForUser(user.id);
     }
   } catch (claimError) {
-    console.error("Showmatch player claim after Discord login failed:", claimError);
+    console.error(
+      "Discord profile sync / showmatch claim after login failed:",
+      claimError,
+    );
   }
 
   return response;

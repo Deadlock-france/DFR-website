@@ -14,9 +14,7 @@ function ShellBody({ children }: { children: React.ReactNode }) {
         className="flex min-h-dvh"
         style={{ backgroundColor: "var(--bg-default)" }}
       >
-        <Suspense fallback={null}>
-          <AppSidebar />
-        </Suspense>
+        <AppSidebar />
 
         <div className="flex min-w-0 flex-1 flex-col pb-(--mobile-nav-clearance) md:pb-0">
           <main className="mx-auto w-full flex-1">

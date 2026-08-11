@@ -8,6 +8,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
+  __resetSidebarMemoryForTests,
   getSidebarOpenServerSnapshot,
   isActivePath,
   readSidebarOpen,
@@ -50,12 +51,14 @@ function subscribeForTest(onChange: () => void): () => void {
 }
 
 beforeEach(() => {
+  __resetSidebarMemoryForTests();
   vi.stubGlobal("localStorage", createMemoryStorage());
 });
 
 afterEach(() => {
   unsubscribes.forEach((unsubscribe) => unsubscribe());
   unsubscribes = [];
+  __resetSidebarMemoryForTests();
   vi.unstubAllGlobals();
 });
 
