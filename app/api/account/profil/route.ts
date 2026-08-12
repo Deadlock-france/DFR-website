@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { unstable_rethrow } from "next/navigation";
 
 import { getCurrentUserId } from "@/lib/account/queries";
 import type {
@@ -133,6 +134,7 @@ export async function GET() {
       },
     });
   } catch (error) {
+    unstable_rethrow(error);
     console.error("GET /api/account/profil failed:", error);
     return NextResponse.json({ user: null }, { status: 200 });
   }

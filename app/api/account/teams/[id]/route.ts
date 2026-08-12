@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { unstable_rethrow } from "next/navigation";
 
 import {
   getCurrentUserId,
@@ -35,6 +36,7 @@ export async function GET(_request: Request, context: RouteContext) {
       isCaptain,
     });
   } catch (error) {
+    unstable_rethrow(error);
     console.error("GET /api/account/teams/[id] failed:", error);
     return NextResponse.json({ userId: null, team: null }, { status: 200 });
   }

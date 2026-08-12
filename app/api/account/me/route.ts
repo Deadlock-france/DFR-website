@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { unstable_rethrow } from "next/navigation";
 
 import { getCurrentUserId } from "@/lib/account/queries";
 import type { AccountDockUser } from "@/lib/account/types";
@@ -38,6 +39,7 @@ export async function GET() {
 
     return NextResponse.json({ user });
   } catch (error) {
+    unstable_rethrow(error);
     console.error("GET /api/account/me failed:", error);
     return NextResponse.json({ user: null }, { status: 200 });
   }

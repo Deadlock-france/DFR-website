@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { unstable_rethrow } from "next/navigation";
 
 import {
   getCurrentUserId,
@@ -16,6 +17,7 @@ export async function GET() {
     const invites = await getPendingInvitesForUser(userId);
     return NextResponse.json({ userId, invites });
   } catch (error) {
+    unstable_rethrow(error);
     console.error("GET /api/account/invites failed:", error);
     return NextResponse.json({ userId: null, invites: [] }, { status: 200 });
   }
