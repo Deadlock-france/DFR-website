@@ -1,4 +1,7 @@
-import { Suspense } from "react";
+"use client";
+
+import { Suspense, type ReactNode } from "react";
+import { usePathname } from "next/navigation";
 
 import AppSidebar from "@/components/AppSidebar";
 import AccountDockClient from "@/components/account/AccountDockClient";
@@ -7,7 +10,7 @@ import AccountNotificationsHost from "@/components/account/AccountNotificationsH
 import SubpageBackButton from "@/components/navigation/SubpageBackButton";
 import { ACCOUNT_NOTIFICATIONS_ENABLED } from "@/lib/account/features";
 
-function ShellBody({ children }: { children: React.ReactNode }) {
+function ShellBody({ children }: { children: ReactNode }) {
   return (
     <>
       <div
@@ -51,11 +54,7 @@ function ShellBody({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function AppShell({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+function SiteShell({ children }: { children: ReactNode }) {
   if (!ACCOUNT_NOTIFICATIONS_ENABLED) {
     return <ShellBody>{children}</ShellBody>;
   }
@@ -66,4 +65,22 @@ export default function AppShell({
       <AccountNotificationsHost />
     </AccountInvitesProvider>
   );
+}
+
+export default function AppShell({ children }: { children: ReactNode }) {
+  return (
+    <Suspense fallback={<>{children}</>}>
+      <AppShellInner>{children}</AppShellInner>
+    </Suspense>
+  );
+}
+
+function AppShellInner({ children }: { children: ReactNode }) {
+  const pathname = usePathname();
+
+  if (pathname === "/acces") {
+    return <>{children}</>;
+  }
+
+  return <SiteShell>{children}</SiteShell>;
 }
