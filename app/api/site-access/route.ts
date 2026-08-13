@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { safeInternalPath } from "@/lib/navigation/safe-path";
 import {
   createSiteAccessToken,
   isSiteAccessEnabled,
@@ -37,7 +38,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const safeNext = next.startsWith("/") ? next : "/";
+  const safeNext = safeInternalPath(next, "/");
   const response = NextResponse.json({ ok: true, next: safeNext });
   response.cookies.set({
     name: SITE_ACCESS_COOKIE,

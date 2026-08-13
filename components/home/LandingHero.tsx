@@ -2,6 +2,7 @@
 
 import { ArrowRight } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
+import Image from "next/image";
 
 import AppLink from "@/components/AppLink";
 import { buttonVariants } from "@/components/shadcn/button";
@@ -63,11 +64,13 @@ export default function LandingHero() {
 
   const section = (
     <section className="relative mb-12 w-full overflow-hidden sm:mb-16">
-      {/* background image */}
-      <div
-        aria-hidden
-        className="absolute inset-0 bg-cover bg-position-[center_15%] bg-no-repeat"
-        style={{ backgroundImage: `url(${HERO_IMAGE})` }}
+      <Image
+        src={HERO_IMAGE}
+        alt="Héros de Deadlock, le hero shooter de Valve"
+        fill
+        priority
+        sizes="100vw"
+        className="object-cover object-[center_15%]"
       />
       {/* fondu noir de gauche à droite noir */}
       <div

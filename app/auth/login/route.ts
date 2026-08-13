@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 
+import { safeInternalPath } from "@/lib/navigation/safe-path";
 import { createClient } from "@/lib/supabase/server";
 
 export async function GET(request: Request) {
   const { origin, searchParams } = new URL(request.url);
-  const nextRaw = searchParams.get("next") ?? "/profil";
-  const next = nextRaw.startsWith("/") ? nextRaw : "/profil";
+  const next = safeInternalPath(searchParams.get("next"), "/profil");
 
   const supabase = await createClient();
 

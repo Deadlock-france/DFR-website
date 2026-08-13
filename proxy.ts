@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
+import { safeInternalPath } from "@/lib/navigation/safe-path";
 import {
   isSiteAccessEnabled,
   isSiteAccessPublicPath,
@@ -31,8 +32,10 @@ export async function proxy(request: NextRequest) {
     }
 
     if (unlocked && pathname === "/acces") {
-      const nextRaw = request.nextUrl.searchParams.get("next") ?? "/";
-      const next = nextRaw.startsWith("/") ? nextRaw : "/";
+      const next = safeInternalPath(
+        request.nextUrl.searchParams.get("next"),
+        "/",
+      );
       return NextResponse.redirect(new URL(next, request.url));
     }
   }

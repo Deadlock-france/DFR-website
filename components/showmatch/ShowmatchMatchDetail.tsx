@@ -24,8 +24,11 @@ export default function ShowmatchMatchDetail({
   const colorB = teamB.side === "sapphire" ? "text-[#7ec0f0]" : "text-[#f0b35a]";
 
   return (
-    <div className="flex w-full flex-col gap-8 px-4 pb-20 pt-4 sm:px-5 lg:px-8">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <article className="flex w-full flex-col gap-8 px-4 pb-20 pt-4 sm:px-5 lg:px-8">
+      <h1 className="sr-only">
+        {teamA.name} vs {teamB.name} — {event.title}, lobby {series.lobbyNumber}
+      </h1>
+      <nav aria-label="Fil d'Ariane" className="flex flex-wrap items-center justify-between gap-3">
         <Link
           href="/showmatch"
           className="text-sm text-muted-foreground transition-colors hover:text-foreground"
@@ -37,9 +40,11 @@ export default function ShowmatchMatchDetail({
           <span className="mx-2 opacity-40">·</span>
           Lobby {series.lobbyNumber}
           <span className="mx-2 opacity-40">·</span>
-          {formatMatchDateTime(event.scheduledAt)}
+          <time dateTime={event.scheduledAt}>
+            {formatMatchDateTime(event.scheduledAt)}
+          </time>
         </p>
-      </div>
+      </nav>
 
       <header className="border border-[#2a3538] bg-[#0c1214] px-4 py-6">
         <p className="mb-4 text-center text-xs font-medium uppercase tracking-[0.18em] text-[#8a9b9f]">
@@ -117,6 +122,6 @@ export default function ShowmatchMatchDetail({
       ) : (
         <ShowmatchGamesViewer games={series.games} />
       )}
-    </div>
+    </article>
   );
 }

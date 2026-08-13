@@ -2,11 +2,13 @@ import type { Metadata } from "next";
 
 import ProfilPageClient from "@/components/account/ProfilPageClient";
 import FadeIn from "@/components/motion/FadeIn";
+import { buildNoIndexMetadata } from "@/lib/seo/metadata";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildNoIndexMetadata({
   title: "Mon profil",
-  description: "Profil joueur Deadlock France",
-};
+  description: "Profil joueur Deadlock France.",
+  path: "/profil",
+});
 
 /**
  * Page sans cookies()/searchParams côté RSC — avec cacheComponents, la lecture

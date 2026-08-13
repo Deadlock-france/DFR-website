@@ -65,10 +65,12 @@ export function NewsLeadCard({
   item,
   subjects = [],
   label = "Dernière mise à jour",
+  titleAs: TitleTag = "h3",
 }: {
   item: SteamNewsItem;
   subjects?: DeadlockReference[];
   label?: string;
+  titleAs?: "h2" | "h3";
 }) {
   return (
     <CardShell
@@ -113,9 +115,9 @@ export function NewsLeadCard({
           </time>
         </div>
 
-        <h3 className="mt-3 line-clamp-3 text-xl font-bold leading-snug tracking-[-0.02em] sm:text-2xl">
+        <TitleTag className="mt-3 line-clamp-3 text-xl font-bold leading-snug tracking-[-0.02em] sm:text-2xl">
           {formatPatchNotesTitle(item.title)}
-        </h3>
+        </TitleTag>
 
         <div
           className="mt-4 line-clamp-5 flex-1 text-sm leading-relaxed text-muted-foreground sm:line-clamp-6"
@@ -143,9 +145,11 @@ export function NewsLeadCard({
 export function NewsCompactCard({
   item,
   subjects = [],
+  titleAs: TitleTag = "h3",
 }: {
   item: SteamNewsItem;
   subjects?: DeadlockReference[];
+  titleAs?: "h2" | "h3";
 }) {
   return (
     <CardShell
@@ -160,9 +164,9 @@ export function NewsCompactCard({
         >
           {formatShortNewsDate(item.date)}
         </time>
-        <h3 className="mt-2 line-clamp-2 flex-1 text-base font-semibold leading-snug tracking-[-0.01em] sm:text-[1.05rem]">
+        <TitleTag className="mt-2 line-clamp-2 flex-1 text-base font-semibold leading-snug tracking-[-0.01em] sm:text-[1.05rem]">
           {formatPatchNotesTitle(item.title)}
-        </h3>
+        </TitleTag>
 
         <div
           className="mt-2 line-clamp-3 text-sm leading-relaxed text-muted-foreground"

@@ -1,13 +1,13 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+import { safeInternalPath } from "@/lib/navigation/safe-path";
 import { getSupabaseAnonKey, getSupabaseUrl } from "@/lib/supabase/env";
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  const nextRaw = searchParams.get("next") ?? "/profil";
-  const next = nextRaw.startsWith("/") ? nextRaw : "/profil";
+  const next = safeInternalPath(searchParams.get("next"), "/profil");
 
   if (!code) {
     return NextResponse.redirect(`${origin}/?authError=callback`);
@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
       const { claimShowmatchPlayerForUser } = await import(
         "@/lib/account/showmatch-claim"
       );
-      await claimShowmatchPlayerForUser(user.id);
+      await claimShowmatchPlayerForUser(user.id, user);
     }
   } catch (claimError) {
     console.error(
