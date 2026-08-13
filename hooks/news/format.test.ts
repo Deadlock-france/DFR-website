@@ -119,6 +119,16 @@ describe("formatPatchNotesContent", () => {
     );
   });
 
+  it("re-découpe un [p] multi-lignes Steam (format 08-12-2026) en paragraphes", () => {
+    expect(
+      formatPatchNotesContent(
+        "[p]- Apollo: stun +0.2s\n- Billy: regen -0.5\n- Doorman: range -5m[/p]",
+      ),
+    ).toBe(
+      "<p>- Apollo: stun +0.2s</p><p>- Billy: regen -0.5</p><p>- Doorman: range -5m</p>",
+    );
+  });
+
   it("laisse le gras inline intact", () => {
     expect(formatPatchNotesContent("Buff de [b]Abrams[/b] en lane")).toBe(
       "Buff de <strong>Abrams</strong> en lane",

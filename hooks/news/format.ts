@@ -35,6 +35,26 @@ function polishPatchNotesHtml(html: string): string {
     },
   );
 
+  // Nouveau format Steam (ex. Minor Update 08-12-2026) : un seul [p] avec des
+  // \n entre chaque ligne → <p>a<br>b<br>c</p>. Sans re-découpe, le linking /
+  // groupement par héros traite tout le bloc comme une seule ligne (Apollo).
+  result = result.replace(
+    /<p(\s[^>]*)?>([\s\S]*?)<\/p>/gi,
+    (match, attrs: string | undefined, inner: string) => {
+      if (!/<br\s*\/?>/i.test(inner)) {
+        return match;
+      }
+
+      const attrStr = attrs ?? "";
+      return inner
+        .split(/<br\s*\/?>/i)
+        .map((part) => part.trim())
+        .filter((part) => part.length > 0)
+        .map((part) => `<p${attrStr}>${part}</p>`)
+        .join("");
+    },
+  );
+
   result = result.replace(/<p>\s*<\/p>/gi, "");
 
   result = result.replace(

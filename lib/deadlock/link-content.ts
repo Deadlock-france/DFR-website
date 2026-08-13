@@ -300,7 +300,14 @@ function tokenizePatchHtml(html: string): HtmlToken[] {
 
     const paragraph = part.match(/^<p>([\s\S]*?)<\/p>$/i);
     if (paragraph) {
-      tokens.push({ kind: "line", html: paragraph[1], wrapper: "p" });
+      // Défense si un <p> multi-lignes (<br>) n'a pas été re-découpé en amont.
+      const lines = paragraph[1].split(/<br\s*\/?>/i);
+      for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
+        if (lineIndex > 0) {
+          tokens.push({ kind: "break" });
+        }
+        tokens.push({ kind: "line", html: lines[lineIndex], wrapper: "p" });
+      }
       continue;
     }
 
@@ -695,11 +702,29 @@ export function linkReferencesInHtml(
 
       const paragraph = part.match(/^<p>([\s\S]*?)<\/p>$/i);
       if (paragraph) {
-        const preferredHeroId = detectPreferredHeroId(
-          plainText(paragraph[1]),
-          candidates,
-        );
-        return `<p>${linkHtmlFragment(paragraph[1], pattern, candidates, preferredHeroId)}</p>`;
+        // Même logique que polish / tokenize : chaque ligne <br> a son propre
+        // héros préféré (sinon Apollo « vole » les abilities des lignes suivantes).
+        const linkedInner = paragraph[1]
+          .split(/(<br\s*\/?>)/i)
+          .map((segment) => {
+            if (!segment || /^<br\s*\/?>$/i.test(segment)) {
+              return segment;
+            }
+
+            const preferredHeroId = detectPreferredHeroId(
+              plainText(segment),
+              candidates,
+            );
+            return linkHtmlFragment(
+              segment,
+              pattern,
+              candidates,
+              preferredHeroId,
+            );
+          })
+          .join("");
+
+        return `<p>${linkedInner}</p>`;
       }
 
       const preferredHeroId = detectPreferredHeroId(plainText(part), candidates);

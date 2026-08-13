@@ -318,6 +318,46 @@ describe("decorateReferenceChangeLines", () => {
     expect(html).toContain(">Infernus</span>");
     expect(html).toContain("<li>dégâts +5</li>");
   });
+
+  it("sépare les héros d'un seul <p> multi-lignes (<br>) — format Steam 08-12", () => {
+    const billy: DeadlockReference = {
+      kind: "hero",
+      id: 80,
+      className: "hero_billy",
+      name: "Billy",
+      image: "https://example.com/billy.webp",
+    };
+    const apollo: DeadlockReference = {
+      kind: "hero",
+      id: 77,
+      className: "hero_apollo",
+      name: "Apollo",
+      image: "https://example.com/apollo.webp",
+    };
+    const doorman: DeadlockReference = {
+      kind: "hero",
+      id: 69,
+      className: "hero_doorman",
+      name: "Doorman",
+      image: "https://example.com/doorman.webp",
+    };
+    const refs = [apollo, billy, doorman];
+
+    // Comme après bbcodeToHtml, avant polish — défense tokenize.
+    const linked = linkReferencesInHtml(
+      "<p>- Apollo: Riposte stun +0.2s<br>- Billy: regen -0.5<br>- Doorman: range -5m</p>",
+      refs,
+    );
+    const html = decorateReferenceChangeLines(linked, refs, "english");
+
+    expect(html.match(/patch-notes-entity"/g)).toHaveLength(3);
+    expect(html).toContain('data-deadlock-entity="hero:77"');
+    expect(html).toContain('data-deadlock-entity="hero:80"');
+    expect(html).toContain('data-deadlock-entity="hero:69"');
+    expect(html).toContain("<li>Riposte stun +0.2s</li>");
+    expect(html).toContain("<li>regen -0.5</li>");
+    expect(html).toContain("<li>range -5m</li>");
+  });
 });
 
 describe("buildReferenceUrlsIndex", () => {

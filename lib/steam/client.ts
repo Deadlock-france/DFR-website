@@ -8,6 +8,11 @@ import {
   fetchPartnerEvents,
   indexEventsByPosttime,
 } from "./events";
+import {
+  getCachedDeeplTranslation,
+  isCachedTranslationFresh,
+  saveDeeplTranslation,
+} from "./translation-cache";
 import { STEAM_NEWS_API, type SteamNewsItem, type SteamNewsResponse } from "./types";
 
 /** Annonces officielles Valve / communauté Steam (hors presse externe). */
@@ -37,7 +42,61 @@ function captureOriginalItem(item: SteamNewsItem): NonNullable<SteamNewsItem["or
   };
 }
 
-async function translateItemWithDeepl(
+async function trySteamFrenchTranslation(
+  item: SteamNewsItem,
+  original: NonNullable<SteamNewsItem["original"]>,
+  event: Awaited<ReturnType<typeof fetchPartnerEvents>>[number] | undefined,
+): Promise<SteamNewsItem | null> {
+  const announcementGid = event?.announcement_body?.gid;
+  if (!event || !announcementGid) {
+    return null;
+  }
+
+  try {
+    const french = await fetchPartnerEventLocalized(
+      event.clan_steamid,
+      announcementGid,
+    );
+
+    if (!french) {
+      return null;
+    }
+
+    return normalizeSteamItem({
+      ...item,
+      title: french.headline.trim(),
+      contents: french.body,
+      translation_source: "steam",
+      original,
+    });
+  } catch (error) {
+    console.error(
+      `Steam FR fetch failed for gid=${item.gid}, trying DB then DeepL:`,
+      error,
+    );
+    return null;
+  }
+}
+
+async function tryCachedFrenchTranslation(
+  item: SteamNewsItem,
+  original: NonNullable<SteamNewsItem["original"]>,
+): Promise<SteamNewsItem | null> {
+  const cached = await getCachedDeeplTranslation(item.gid);
+  if (!cached || !isCachedTranslationFresh(cached, original)) {
+    return null;
+  }
+
+  return normalizeSteamItem({
+    ...item,
+    title: cached.title_fr,
+    contents: cached.contents_fr,
+    translation_source: "deepl",
+    original,
+  });
+}
+
+async function translateViaDeeplAndPersist(
   item: SteamNewsItem,
   original: NonNullable<SteamNewsItem["original"]>,
 ): Promise<SteamNewsItem> {
@@ -50,15 +109,32 @@ async function translateItemWithDeepl(
     return normalizeSteamItem({ ...item, translation_source: "en", original });
   }
 
-  return normalizeSteamItem({
+  const localized = normalizeSteamItem({
     ...item,
     title: title ?? item.title,
     contents: contents ?? item.contents,
     translation_source: "deepl",
     original,
   });
+
+  await saveDeeplTranslation({
+    gid: item.gid,
+    appid: item.appid,
+    source_title: original.title,
+    source_contents: original.contents,
+    title_fr: localized.title,
+    contents_fr: localized.contents,
+  });
+
+  return localized;
 }
 
+/**
+ * Ordre de localisation FR :
+ * 1. VF Valve (Steam Events) si dispo
+ * 2. VF déjà en BDD (traduction DeepL précédente)
+ * 3. DeepL → upsert BDD pour les prochains passages
+ */
 async function localizePatchNotes(
   items: SteamNewsItem[],
   appId: number,
@@ -72,40 +148,31 @@ async function localizePatchNotes(
     const events = await fetchPartnerEvents(appId);
     eventsByPosttime = indexEventsByPosttime(events);
   } catch (error) {
-    console.error("Steam Events lookup failed, falling back to DeepL:", error);
+    console.error(
+      "Steam Events lookup failed, falling back to DB then DeepL:",
+      error,
+    );
   }
 
   return Promise.all(
     items.map(async (item) => {
       const original = captureOriginalItem(item);
-      const event = eventsByPosttime.get(item.date);
-      const announcementGid = event?.announcement_body?.gid;
 
-      if (event && announcementGid) {
-        try {
-          const french = await fetchPartnerEventLocalized(
-            event.clan_steamid,
-            announcementGid,
-          );
-
-          if (french) {
-            return normalizeSteamItem({
-              ...item,
-              title: french.headline.trim(),
-              contents: french.body,
-              translation_source: "steam" as const,
-              original,
-            });
-          }
-        } catch (error) {
-          console.error(
-            `Steam FR fetch failed for gid=${item.gid}, trying DeepL:`,
-            error,
-          );
-        }
+      const fromSteam = await trySteamFrenchTranslation(
+        item,
+        original,
+        eventsByPosttime.get(item.date),
+      );
+      if (fromSteam) {
+        return fromSteam;
       }
 
-      return translateItemWithDeepl(item, original);
+      const fromDb = await tryCachedFrenchTranslation(item, original);
+      if (fromDb) {
+        return fromDb;
+      }
+
+      return translateViaDeeplAndPersist(item, original);
     }),
   );
 }

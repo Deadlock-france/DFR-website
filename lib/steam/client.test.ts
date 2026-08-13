@@ -10,7 +10,22 @@ const { cacheLife, cacheTag } = vi.hoisted(() => ({
   cacheTag: vi.fn(),
 }));
 
+const { getCachedDeeplTranslation, saveDeeplTranslation } = vi.hoisted(() => ({
+  getCachedDeeplTranslation: vi.fn(),
+  saveDeeplTranslation: vi.fn(),
+}));
+
 vi.mock("next/cache", () => ({ cacheLife, cacheTag }));
+vi.mock("./translation-cache", async () => {
+  const actual = await vi.importActual<typeof import("./translation-cache")>(
+    "./translation-cache",
+  );
+  return {
+    ...actual,
+    getCachedDeeplTranslation,
+    saveDeeplTranslation,
+  };
+});
 
 const DEADLOCK_APP_ID = 1422450;
 const CLAN_STEAMID = "103582791470414830";
@@ -111,6 +126,8 @@ beforeEach(() => {
   vi.stubGlobal("fetch", fetchMock);
   vi.stubEnv("DEEPL_API_KEY", "test-key");
   vi.spyOn(console, "error").mockImplementation(() => {});
+  getCachedDeeplTranslation.mockResolvedValue(null);
+  saveDeeplTranslation.mockResolvedValue(undefined);
 });
 
 afterEach(() => {
@@ -270,6 +287,8 @@ describe("getSteamNews", () => {
       expect(
         fetchMock.mock.calls.some((c) => String(c[0]).includes("deepl")),
       ).toBe(false);
+      expect(getCachedDeeplTranslation).not.toHaveBeenCalled();
+      expect(saveDeeplTranslation).not.toHaveBeenCalled();
     });
 
     it("conserve les métadonnées de l'article ISteamNews", async () => {
@@ -353,6 +372,79 @@ describe("getSteamNews", () => {
       expect(item.translation_source).toBe("deepl");
       expect(item.title).toBe("Update - July 26");
       expect(item.contents).toContain("Héros");
+    });
+
+    it("réutilise une traduction DeepL déjà en base sans rappeler l'API", async () => {
+      getCachedDeeplTranslation.mockResolvedValue({
+        gid: "news-1",
+        appid: DEADLOCK_APP_ID,
+        source_title: "Update - July 26",
+        source_contents: "[b]Heroes[/b] rebalanced",
+        title_fr: "Mise à jour (cache)",
+        contents_fr: "[b]Héros[/b] depuis la BDD",
+      });
+      stubNetwork({
+        news: { appnews: { appid: DEADLOCK_APP_ID, newsitems: [newsItem()], count: 1 } },
+        events: { success: 1, events: [] },
+        deepl: () => {
+          throw new Error("DeepL ne devrait pas être appelé");
+        },
+      });
+
+      const [item] = await getSteamNews();
+
+      expect(item.translation_source).toBe("deepl");
+      expect(item.title).toBe("Mise à jour (cache)");
+      expect(item.contents).toBe("[b]Héros[/b] depuis la BDD");
+      expect(item.original).toEqual({
+        title: "Update - July 26",
+        contents: "[b]Heroes[/b] rebalanced",
+      });
+      expect(
+        fetchMock.mock.calls.some((c) => String(c[0]).includes("deepl")),
+      ).toBe(false);
+      expect(saveDeeplTranslation).not.toHaveBeenCalled();
+    });
+
+    it("enregistre en base après une traduction DeepL réussie", async () => {
+      stubNetwork({
+        news: { appnews: { appid: DEADLOCK_APP_ID, newsitems: [newsItem()], count: 1 } },
+        events: { success: 1, events: [] },
+        deepl: (text) =>
+          text.includes("Heroes") ? "Héros rééquilibrés" : "Mise à jour",
+      });
+
+      await getSteamNews();
+
+      expect(saveDeeplTranslation).toHaveBeenCalledWith({
+        gid: "news-1",
+        appid: DEADLOCK_APP_ID,
+        source_title: "Update - July 26",
+        source_contents: "[b]Heroes[/b] rebalanced",
+        title_fr: "Mise à jour",
+        contents_fr: "Héros rééquilibrés",
+      });
+    });
+
+    it("retraduit si le texte anglais Steam a changé depuis le cache", async () => {
+      getCachedDeeplTranslation.mockResolvedValue({
+        gid: "news-1",
+        appid: DEADLOCK_APP_ID,
+        source_title: "Old title",
+        source_contents: "Old contents",
+        title_fr: "Ancien titre",
+        contents_fr: "Ancien contenu",
+      });
+      stubNetwork({
+        news: { appnews: { appid: DEADLOCK_APP_ID, newsitems: [newsItem()], count: 1 } },
+        events: { success: 1, events: [] },
+        deepl: (text) => `FR:${text}`,
+      });
+
+      const [item] = await getSteamNews();
+
+      expect(item.title).toBe("FR:Update - July 26");
+      expect(saveDeeplTranslation).toHaveBeenCalled();
     });
   });
 
