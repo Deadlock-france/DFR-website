@@ -55,32 +55,45 @@ export default function ArticleView({
   );
 
   return (
-    <div className="mt-4 flex flex-col gap-6 p-4 sm:p-5">
-      <nav aria-label="breadcrumb" className="flex items-center gap-2 text-sm">
-        <AppLink href="/" className="text-muted-foreground hover:text-foreground">
-          Accueil
-        </AppLink>
-        <span className="text-muted-foreground">/</span>
-        <AppLink
-          href="/patch-notes"
-          className="text-muted-foreground hover:text-foreground"
-        >
-          Patch notes
-        </AppLink>
-        <span className="text-muted-foreground">/</span>
-        <span className="max-w-300px truncate text-foreground">
-          {display.title}
-        </span>
+    <article className="mt-4 flex flex-col gap-6 p-4 sm:p-5">
+      <nav aria-label="Fil d'Ariane" className="text-sm">
+        <ol className="flex items-center gap-2">
+          <li>
+            <AppLink href="/" className="text-muted-foreground hover:text-foreground">
+              Accueil
+            </AppLink>
+          </li>
+          <li aria-hidden className="text-muted-foreground">
+            /
+          </li>
+          <li>
+            <AppLink
+              href="/patch-notes"
+              className="text-muted-foreground hover:text-foreground"
+            >
+              Patch notes
+            </AppLink>
+          </li>
+          <li aria-hidden className="text-muted-foreground">
+            /
+          </li>
+          <li className="max-w-300px truncate text-foreground" aria-current="page">
+            {display.title}
+          </li>
+        </ol>
       </nav>
 
       <div className="flex flex-col gap-4">
-        <div className="flex flex-col gap-2">
-          <span className="text-sm text-muted-foreground">
+        <header className="flex flex-col gap-2">
+          <time
+            dateTime={new Date(item.date * 1000).toISOString()}
+            className="text-sm text-muted-foreground"
+          >
             {formatNewsDate(item.date)} · {item.author || "Valve"}
-          </span>
+          </time>
 
           <h1 className="text-3xl font-bold">{display.title}</h1>
-        </div>
+        </header>
 
         <ReferenceLanguageSwitch
           value={referenceLanguage}
@@ -101,6 +114,6 @@ export default function ArticleView({
           referencesByLanguage={referencesByLanguage}
         />
       </div>
-    </div>
+    </article>
   );
 }

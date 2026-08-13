@@ -48,6 +48,7 @@ export default function HomeLatestShowmatches({
       <ShowmatchSummaryList
         summaries={summaries}
         showDayHeaders={false}
+        eventHeading="h3"
       />
     </section>
   );

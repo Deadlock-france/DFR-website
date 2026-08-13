@@ -23,7 +23,7 @@ export default function HomeCommunity() {
         <div className="absolute inset-0">
           <Image
             src={COMMUNITY_IMAGE}
-            alt=""
+            alt="Joueurs de la communauté francophone Deadlock France"
             fill
             sizes="(max-width: 1500px) 100vw, 1500px"
             className="object-cover object-center"

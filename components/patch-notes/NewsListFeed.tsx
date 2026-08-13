@@ -14,9 +14,11 @@ import type { SteamNewsItem } from "@/lib/steam/types";
 function NewsFeedGrid({
   items,
   references,
+  titleAs = "h2",
 }: {
   items: SteamNewsItem[];
   references: DeadlockReference[];
+  titleAs?: "h2" | "h3";
 }) {
   const [lead, ...rest] = items;
 
@@ -34,7 +36,11 @@ function NewsFeedGrid({
 
   return (
     <div className="flex flex-col gap-4">
-      <NewsLeadCard item={lead} subjects={subjectsByGid.get(lead.gid) ?? []} />
+      <NewsLeadCard
+        item={lead}
+        subjects={subjectsByGid.get(lead.gid) ?? []}
+        titleAs={titleAs}
+      />
 
       {rest.length > 0 ? (
         <div className="flex flex-col gap-4">
@@ -43,6 +49,7 @@ function NewsFeedGrid({
               key={item.gid}
               item={item}
               subjects={subjectsByGid.get(item.gid) ?? []}
+              titleAs={titleAs}
             />
           ))}
         </div>
@@ -70,15 +77,16 @@ export default function NewsListFeed({
   }
 
   return (
-    <motion.div
-      className="p-4 sm:p-5"
-      variants={staggerContainer}
-      initial="hidden"
-      animate="visible"
-    >
-      <motion.div variants={staggerItem}>
-        <NewsFeedGrid items={items} references={references} />
+    <section aria-label="Liste des patch notes" className="p-4 sm:p-5">
+      <motion.div
+        variants={staggerContainer}
+        initial="hidden"
+        animate="visible"
+      >
+        <motion.div variants={staggerItem}>
+          <NewsFeedGrid items={items} references={references} titleAs="h2" />
+        </motion.div>
       </motion.div>
-    </motion.div>
+    </section>
   );
 }

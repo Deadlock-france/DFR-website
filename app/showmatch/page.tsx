@@ -2,8 +2,11 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 
 import PageHero from "@/components/patch-notes/PageHero";
+import JsonLd from "@/components/seo/JsonLd";
 import ShowmatchDayFilter from "@/components/showmatch/ShowmatchDayFilter";
 import ShowmatchSummaryList from "@/components/showmatch/ShowmatchSummaryList";
+import { showmatchIndexJsonLd } from "@/lib/seo/json-ld";
+import { buildPageMetadata } from "@/lib/seo/metadata";
 import { getShowmatchEvents } from "@/lib/showmatch/data";
 import {
   filterSummariesByDay,
@@ -12,11 +15,15 @@ import {
   resolveShowmatchDayFilter,
 } from "@/lib/showmatch/summaries";
 
-export const metadata: Metadata = {
-  title: "Showmatch",
-  description:
-    "Showmatchs hebdomadaires Deadlock France : résultats, rosters et stats de la communauté.",
-};
+const TITLE = "Showmatchs Deadlock France";
+const DESCRIPTION =
+  "Résultats des showmatchs hebdomadaires de la communauté francophone Deadlock : scores, rosters, héros, MVP et stats de chaque série.";
+
+export const metadata: Metadata = buildPageMetadata({
+  title: TITLE,
+  description: DESCRIPTION,
+  path: "/showmatch",
+});
 
 interface ShowmatchFeedProps {
   searchParams: Promise<{ jour?: string }>;
@@ -32,6 +39,15 @@ async function ShowmatchFeed({ searchParams }: ShowmatchFeedProps) {
 
   return (
     <>
+      <JsonLd
+        data={showmatchIndexJsonLd(
+          allSummaries.map((series) => ({
+            id: series.id,
+            teamAName: series.teamAName,
+            teamBName: series.teamBName,
+          })),
+        )}
+      />
       <ShowmatchDayFilter days={days} activeDay={activeDay} />
       <ShowmatchSummaryList
         summaries={summaries}

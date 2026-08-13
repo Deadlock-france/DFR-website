@@ -224,8 +224,12 @@ function SeriesSummaryCard({ series }: { series: ShowmatchSeriesSummary }) {
     <li>
       <Link
         href={`/showmatch/${series.id}`}
+        aria-label={`${series.teamAName} contre ${series.teamBName}, lobby ${series.lobbyNumber}`}
         className="group block overflow-hidden border border-[#2a3538] bg-[#0c1214] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition-[border-color,box-shadow] hover:border-[#4a5c62] hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.06),0_0_0_1px_rgba(88,164,132,0.15)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
+        <h3 className="sr-only">
+          {series.teamAName} vs {series.teamBName}
+        </h3>
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#2a3538] bg-[linear-gradient(90deg,rgba(180,96,28,0.12),transparent_35%,transparent_65%,rgba(40,90,150,0.14))] px-4 py-2.5 sm:px-5">
           <p className="text-xs font-medium uppercase tracking-[0.16em] text-[#9aabac] sm:text-[13px]">
             <span className="text-foreground/85">Lobby {series.lobbyNumber}</span>
@@ -331,9 +335,11 @@ function SeriesSummaryCard({ series }: { series: ShowmatchSeriesSummary }) {
 export default function ShowmatchSummaryList({
   summaries,
   showDayHeaders = true,
+  eventHeading: EventHeading = "h2",
 }: {
   summaries: ShowmatchSeriesSummary[];
   showDayHeaders?: boolean;
+  eventHeading?: "h2" | "h3";
 }) {
   if (summaries.length === 0) {
     return (
@@ -354,9 +360,9 @@ export default function ShowmatchSummaryList({
               <p className="text-xs font-medium uppercase tracking-[0.18em] text-[#8a9b9f]">
                 {formatEventDate(group.eventDate)}
               </p>
-              <h2 className="font-colus mt-1 text-3xl uppercase tracking-wide text-foreground">
+              <EventHeading className="font-colus mt-1 text-3xl uppercase tracking-wide text-foreground">
                 {group.eventTitle}
-              </h2>
+              </EventHeading>
               <p className="mt-1 text-sm text-[#8a9b9f]">
                 {group.matches.length} série
                 {group.matches.length > 1 ? "s" : ""} ce soir
@@ -364,9 +370,9 @@ export default function ShowmatchSummaryList({
             </header>
           ) : (
             <header className="flex items-end justify-between gap-3 border-b border-[#2a3538] pb-3">
-              <h2 className="font-colus text-2xl uppercase tracking-wide text-foreground">
+              <EventHeading className="font-colus text-2xl uppercase tracking-wide text-foreground">
                 {group.eventTitle}
-              </h2>
+              </EventHeading>
               <p className="text-sm text-[#8a9b9f]">
                 {group.matches.length} série
                 {group.matches.length > 1 ? "s" : ""}

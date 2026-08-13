@@ -4,11 +4,13 @@ import { redirect } from "next/navigation";
 import NouvelleEquipeForm from "@/components/account/NouvelleEquipeForm";
 import FadeIn from "@/components/motion/FadeIn";
 import { ACCOUNT_TEAMS_ENABLED } from "@/lib/account/features";
+import { buildNoIndexMetadata } from "@/lib/seo/metadata";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildNoIndexMetadata({
   title: "Créer une équipe",
-  description: "Créer une équipe Deadlock France",
-};
+  description: "Créer une équipe Deadlock France.",
+  path: "/equipes/nouvelle",
+});
 
 export default function NouvelleEquipePage() {
   if (!ACCOUNT_TEAMS_ENABLED) {

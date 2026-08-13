@@ -1,6 +1,14 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 
 import AccesPageClient from "@/components/site-access/AccesPageClient";
+import { buildNoIndexMetadata } from "@/lib/seo/metadata";
+
+export const metadata: Metadata = buildNoIndexMetadata({
+  title: "Accès au site",
+  description: "Accès réservé à Deadlock France.",
+  path: "/acces",
+});
 
 export default function AccesPage() {
   return (

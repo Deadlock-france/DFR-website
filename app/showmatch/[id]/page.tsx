@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
+import JsonLd from "@/components/seo/JsonLd";
 import ShowmatchMatchDetail from "@/components/showmatch/ShowmatchMatchDetail";
+import { showmatchDetailJsonLd } from "@/lib/seo/json-ld";
+import { buildPageMetadata } from "@/lib/seo/metadata";
 import {
   getAllShowmatchSeriesIds,
   getMockShowmatchSeries,
@@ -28,18 +31,32 @@ export async function generateMetadata({
   params,
 }: ShowmatchDetailPageProps): Promise<Metadata> {
   const { id } = await params;
-  const series = await getShowmatchSeriesById(id);
+  const [series, event] = await Promise.all([
+    getShowmatchSeriesById(id),
+    getShowmatchEventForSeries(id),
+  ]);
 
   if (!series) {
-    return { title: "Showmatch" };
+    return buildPageMetadata({
+      title: "Showmatch introuvable",
+      description: "Cette série showmatch n’est plus disponible.",
+      path: `/showmatch/${id}`,
+      index: false,
+    });
   }
 
   const [teamA, teamB] = series.teams;
+  const scoreA =
+    teamA.teamKey === "team1" ? series.scoreTeam1 : series.scoreTeam2;
+  const scoreB =
+    teamB.teamKey === "team1" ? series.scoreTeam1 : series.scoreTeam2;
+  const eventLabel = event?.title ?? "Showmatch";
 
-  return {
+  return buildPageMetadata({
     title: `${teamA.name} vs ${teamB.name}`,
-    description: `Série showmatch ${teamA.name} contre ${teamB.name} — lobby ${series.lobbyNumber}.`,
-  };
+    description: `Showmatch Deadlock France : ${teamA.name} ${scoreA}–${scoreB} ${teamB.name} — ${eventLabel}, lobby ${series.lobbyNumber}. Scores, rosters et stats.`,
+    path: `/showmatch/${id}`,
+  });
 }
 
 async function ShowmatchDetailContent({
@@ -53,7 +70,12 @@ async function ShowmatchDetailContent({
     notFound();
   }
 
-  return <ShowmatchMatchDetail series={series} event={event} />;
+  return (
+    <>
+      <JsonLd data={showmatchDetailJsonLd(series, event)} />
+      <ShowmatchMatchDetail series={series} event={event} />
+    </>
+  );
 }
 
 function ShowmatchDetailFallback() {

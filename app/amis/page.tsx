@@ -5,11 +5,13 @@ import { UserPlus } from "lucide-react";
 import PlayerSearchInvite from "@/components/account/PlayerSearchInvite";
 import FadeIn from "@/components/motion/FadeIn";
 import { ACCOUNT_FRIENDS_ENABLED } from "@/lib/account/features";
+import { buildNoIndexMetadata } from "@/lib/seo/metadata";
 
-export const metadata: Metadata = {
+export const metadata: Metadata = buildNoIndexMetadata({
   title: "Amis",
-  description: "Ajouter des amis Deadlock France",
-};
+  description: "Ajouter des amis sur Deadlock France.",
+  path: "/amis",
+});
 
 /** Page statique — auth gérée côté client / actions, pas de cookies() RSC. */
 export default function AmisPage() {
