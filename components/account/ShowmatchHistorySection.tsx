@@ -1,5 +1,6 @@
 import AppLink from "@/components/AppLink";
 import ShowmatchClaimForm from "@/components/account/ShowmatchClaimForm";
+import { ACCOUNT_SHOWMATCH_NICKNAME_CLAIM_ENABLED } from "@/lib/account/features";
 import type { ShowmatchHistoryEntry } from "@/lib/account/types";
 import { formatMatchDateTime, formatMatchDuration } from "@/lib/showmatch/format";
 import { cn } from "@/lib/utils";
@@ -13,6 +14,8 @@ const CLAIM_ERROR_MESSAGES: Record<string, string> = {
   missing_discord: "Connecte-toi avec Discord pour rattacher ton historique.",
   invalid_nickname: "Pseudo invalide (2 à 64 caractères).",
   claim_failed: "Le rattachement a échoué. Réessaie dans un instant.",
+  claim_disabled:
+    "Le rattachement par pseudo n’est plus disponible. Connecte-toi avec Discord.",
 };
 
 export default function ShowmatchHistorySection({
@@ -36,8 +39,8 @@ export default function ShowmatchHistorySection({
         Historique showmatch
       </h2>
       <p className="mb-4 text-sm text-muted-foreground">
-        Parties rattachées à ton compte. Handle Discord et pseudo bot peuvent
-        différer.
+        Parties rattachées à ton compte Discord. Le rattachement se fait via
+        l’identifiant Discord, pas via un pseudo libre.
       </p>
 
       {claimOk ? (
@@ -71,10 +74,13 @@ export default function ShowmatchHistorySection({
           style={{ borderColor: "#1f2937" }}
         >
           <p className="text-sm text-muted-foreground">
-            Aucun match rattaché. Si tu as joué sous un autre pseudo que ton
-            handle Discord, indique le pseudo utilisé par le bot ci-dessous.
+            Aucun match rattaché à ton compte Discord. L’historique apparaît
+            quand le bot a enregistré le même identifiant Discord que ton
+            login.
           </p>
-          <ShowmatchClaimForm currentNickname={showmatchNickname} />
+          {ACCOUNT_SHOWMATCH_NICKNAME_CLAIM_ENABLED ? (
+            <ShowmatchClaimForm currentNickname={showmatchNickname} />
+          ) : null}
         </div>
       ) : (
         <>

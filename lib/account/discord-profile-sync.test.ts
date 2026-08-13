@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { parseDiscordIdentity } from "./discord-profile-sync";
+import {
+  asDiscordSnowflake,
+  parseDiscordIdentity,
+  pickDiscordIdentity,
+} from "./discord-profile-sync";
 
 describe("parseDiscordIdentity", () => {
   it("préfère custom_claims.global_name au username", () => {
@@ -51,5 +55,74 @@ describe("parseDiscordIdentity", () => {
         full_name: "Julien",
       }).global_name,
     ).toBe("Julien");
+  });
+});
+
+describe("asDiscordSnowflake", () => {
+  it("accepte un snowflake Discord", () => {
+    expect(asDiscordSnowflake("123456789012345678")).toBe("123456789012345678");
+  });
+
+  it("rejette un UUID auth et les chaînes trop courtes", () => {
+    expect(asDiscordSnowflake("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee")).toBeNull();
+    expect(asDiscordSnowflake("123")).toBeNull();
+    expect(asDiscordSnowflake("")).toBeNull();
+  });
+});
+
+describe("pickDiscordIdentity", () => {
+  const snowflake = "123456789012345678";
+
+  it("lit le snowflake depuis identity_data, pas depuis user_metadata", () => {
+    expect(
+      pickDiscordIdentity([
+        {
+          id: snowflake,
+          user_id: "user-1",
+          identity_id: "11111111-2222-3333-4444-555555555555",
+          provider: "discord",
+          identity_data: {
+            provider_id: snowflake,
+            preferred_username: "kaliqot",
+            custom_claims: { global_name: "Julien" },
+          },
+        },
+      ]),
+    ).toEqual({
+      providerId: snowflake,
+      identityData: {
+        provider_id: snowflake,
+        preferred_username: "kaliqot",
+        custom_claims: { global_name: "Julien" },
+      },
+    });
+  });
+
+  it("ignore un UUID dans identity.id", () => {
+    expect(
+      pickDiscordIdentity([
+        {
+          id: "11111111-2222-3333-4444-555555555555",
+          user_id: "user-1",
+          identity_id: "11111111-2222-3333-4444-555555555555",
+          provider: "discord",
+          identity_data: { sub: "not-a-snowflake" },
+        },
+      ]),
+    ).toBeNull();
+  });
+
+  it("ignore les identités non Discord", () => {
+    expect(
+      pickDiscordIdentity([
+        {
+          id: snowflake,
+          user_id: "user-1",
+          identity_id: "11111111-2222-3333-4444-555555555555",
+          provider: "email",
+          identity_data: { provider_id: snowflake },
+        },
+      ]),
+    ).toBeNull();
   });
 });

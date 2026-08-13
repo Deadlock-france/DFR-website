@@ -3,7 +3,10 @@
 import { redirect, unstable_rethrow } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
-import { ACCOUNT_PROFILE_EDIT_ENABLED } from "@/lib/account/features";
+import {
+  ACCOUNT_PROFILE_EDIT_ENABLED,
+  ACCOUNT_SHOWMATCH_NICKNAME_CLAIM_ENABLED,
+} from "@/lib/account/features";
 import { getCurrentUserId, updateDisplayName } from "@/lib/account/queries";
 import { claimShowmatchPlayerByNickname } from "@/lib/account/showmatch-claim";
 
@@ -30,6 +33,10 @@ export async function updateDisplayNameAction(formData: FormData) {
 }
 
 export async function claimShowmatchNicknameAction(formData: FormData) {
+  if (!ACCOUNT_SHOWMATCH_NICKNAME_CLAIM_ENABLED) {
+    redirect("/profil");
+  }
+
   const userId = await getCurrentUserId();
   if (!userId) {
     redirect("/auth/login?next=/profil");
@@ -51,6 +58,7 @@ export async function claimShowmatchNicknameAction(formData: FormData) {
       "missing_discord",
       "invalid_nickname",
       "claim_failed",
+      "claim_disabled",
     ]);
     redirect(
       `/profil?claim_error=${encodeURIComponent(known.has(code) ? code : "claim_failed")}`,

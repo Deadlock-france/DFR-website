@@ -4,13 +4,13 @@ import { useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { buttonVariants } from "@/components/shadcn/button";
+import { safeInternalPath } from "@/lib/navigation/safe-path";
 import { cn } from "@/lib/utils";
 
 export default function AccesPageClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const nextParam = searchParams.get("next") ?? "/";
-  const next = nextParam.startsWith("/") ? nextParam : "/";
+  const next = safeInternalPath(searchParams.get("next"), "/");
 
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -36,7 +36,7 @@ export default function AccesPageClient() {
       }
 
       const data = (await response.json()) as { next?: string };
-      router.replace(data.next?.startsWith("/") ? data.next : next);
+      router.replace(safeInternalPath(data.next, next));
       router.refresh();
     } catch {
       setError("Impossible de vérifier le mot de passe.");

@@ -1,3 +1,9 @@
+import type { User } from "@supabase/supabase-js";
+
+import {
+  asDiscordSnowflake,
+  resolveDiscordIdentity,
+} from "@/lib/account/discord-profile-sync";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 
 type IdentityData = Record<string, unknown>;
@@ -10,93 +16,6 @@ function asString(value: unknown): string | null {
 
 function normalizeName(value: string): string {
   return value.toLowerCase().replace(/[^a-z0-9]/gi, "");
-}
-
-async function loadProfileNames(userId: string): Promise<{
-  username: string | null;
-  global_name: string | null;
-  display_name: string | null;
-  showmatch_nickname: string | null;
-  avatar_url?: string | null;
-  discord_id?: string | null;
-} | null> {
-  const sb = createServiceRoleClient();
-  const full = await sb
-    .from("profiles")
-    .select(
-      "discord_id, username, global_name, display_name, showmatch_nickname, avatar_url",
-    )
-    .eq("id", userId)
-    .maybeSingle();
-
-  if (!full.error) {
-    return full.data as {
-      username: string | null;
-      global_name: string | null;
-      display_name: string | null;
-      showmatch_nickname: string | null;
-      avatar_url?: string | null;
-      discord_id?: string | null;
-    } | null;
-  }
-
-  // Migration showmatch_nickname pas encore appliquée.
-  if (/showmatch_nickname|column .* does not exist/i.test(full.error.message)) {
-    const fallback = await sb
-      .from("profiles")
-      .select("discord_id, username, global_name, display_name, avatar_url")
-      .eq("id", userId)
-      .maybeSingle();
-    if (fallback.error) throw fallback.error;
-    return fallback.data
-      ? { ...fallback.data, showmatch_nickname: null }
-      : null;
-  }
-
-  throw full.error;
-}
-
-function customClaimsGlobalName(identityData: IdentityData): string | null {
-  const claims = identityData.custom_claims;
-  if (!claims || typeof claims !== "object" || Array.isArray(claims)) {
-    return null;
-  }
-  return asString((claims as Record<string, unknown>).global_name);
-}
-
-function collectNameCandidates(
-  identityData: IdentityData,
-  profile: {
-    username: string | null;
-    global_name: string | null;
-    display_name: string | null;
-    showmatch_nickname?: string | null;
-  } | null,
-): string[] {
-  const raw = [
-    customClaimsGlobalName(identityData),
-    asString(identityData.full_name),
-    asString(identityData.global_name),
-    asString(identityData.name),
-    asString(identityData.preferred_username),
-    asString(identityData.user_name),
-    asString(identityData.showmatch_nickname),
-    profile?.username ?? null,
-    profile?.global_name ?? null,
-    profile?.display_name ?? null,
-    profile?.showmatch_nickname ?? null,
-  ];
-  return [
-    ...new Set(
-      raw
-        .filter((v): v is string => Boolean(v))
-        .flatMap((v) => {
-          const lower = v.toLowerCase();
-          const normalized = normalizeName(v);
-          return normalized ? [lower, normalized] : [lower];
-        }),
-    ),
-  ];
 }
 
 async function mergeShowmatchPlayers(
@@ -196,7 +115,7 @@ async function mergeShowmatchPlayers(
 }
 
 /**
- * Rattache le compte Discord au joueur showmatch (snowflake, sinon pseudo unique).
+ * Rattache le compte Discord au joueur showmatch (snowflake uniquement).
  * Utilise le service_role (serveur uniquement).
  */
 export async function linkDiscordShowmatchPlayer(opts: {
@@ -204,7 +123,7 @@ export async function linkDiscordShowmatchPlayer(opts: {
   providerId: string;
   identityData?: IdentityData;
 }): Promise<string | null> {
-  const providerId = opts.providerId.trim();
+  const providerId = asDiscordSnowflake(opts.providerId);
   if (!providerId) return null;
 
   const sb = createServiceRoleClient();
@@ -220,9 +139,6 @@ export async function linkDiscordShowmatchPlayer(opts: {
   const avatar =
     asString(identityData.avatar_url) ?? asString(identityData.picture);
 
-  const profile = await loadProfileNames(opts.userId);
-  const names = collectNameCandidates(identityData, profile);
-
   const { data: byId } = await sb
     .from("players")
     .select("id, auth_user_id, discord_username, display_name")
@@ -234,25 +150,6 @@ export async function linkDiscordShowmatchPlayer(opts: {
     .select("id")
     .eq("auth_user_id", opts.userId)
     .maybeSingle();
-
-  let byNameId: string | null = null;
-  if (names.length > 0) {
-    const { data: unclaimed } = await sb
-      .from("players")
-      .select("id, discord_username")
-      .is("claimed_at", null);
-
-    const matches = (unclaimed ?? []).filter((p) => {
-      const username = (p.discord_username ?? "").trim();
-      if (!username) return false;
-      const lower = username.toLowerCase();
-      const normalized = normalizeName(username);
-      return names.includes(lower) || (normalized.length > 0 && names.includes(normalized));
-    });
-    if (matches.length === 1) {
-      byNameId = matches[0].id;
-    }
-  }
 
   if (byId) {
     if (byId.auth_user_id && byId.auth_user_id !== opts.userId) {
@@ -276,19 +173,13 @@ export async function linkDiscordShowmatchPlayer(opts: {
       })
       .eq("id", byId.id);
 
-    if (byNameId && byNameId !== byId.id) {
-      await mergeShowmatchPlayers(byNameId, byId.id);
-    }
-    if (mine?.id && mine.id !== byId.id && mine.id !== byNameId) {
+    if (mine?.id && mine.id !== byId.id) {
       await mergeShowmatchPlayers(mine.id, byId.id);
     }
     return byId.id;
   }
 
   if (mine?.id) {
-    if (byNameId && byNameId !== mine.id) {
-      await mergeShowmatchPlayers(byNameId, mine.id);
-    }
     await sb
       .from("players")
       .update({
@@ -298,19 +189,6 @@ export async function linkDiscordShowmatchPlayer(opts: {
       })
       .eq("id", mine.id);
     return mine.id;
-  }
-
-  if (byNameId) {
-    await sb
-      .from("players")
-      .update({
-        discord_id: providerId,
-        auth_user_id: opts.userId,
-        claimed_at: new Date().toISOString(),
-        avatar_url: avatar,
-      })
-      .eq("id", byNameId);
-    return byNameId;
   }
 
   const { data: inserted, error } = await sb
@@ -330,129 +208,29 @@ export async function linkDiscordShowmatchPlayer(opts: {
   return inserted.id;
 }
 
-/** Claim pour l’utilisateur courant (identity Discord via profiles.discord_id). */
+/** Claim via auth.identities (jamais profiles.discord_id ni user_metadata). */
 export async function claimShowmatchPlayerForUser(
   userId: string,
+  user?: Pick<User, "identities"> | null,
 ): Promise<string | null> {
-  const profile = await loadProfileNames(userId);
-
-  if (!profile?.discord_id) {
-    return null;
-  }
+  const identity = await resolveDiscordIdentity(userId, user);
+  if (!identity) return null;
 
   return linkDiscordShowmatchPlayer({
     userId,
-    providerId: profile.discord_id,
-    identityData: {
-      preferred_username: profile.username,
-      user_name: profile.username,
-      global_name: profile.global_name,
-      full_name: profile.global_name ?? profile.display_name,
-      name: profile.display_name ?? profile.global_name ?? profile.username,
-      showmatch_nickname: profile.showmatch_nickname,
-      avatar_url: profile.avatar_url,
-    },
+    providerId: identity.providerId,
+    identityData: identity.identityData,
   });
 }
 
 /**
- * Rattache l’historique via le pseudo bot showmatch (ex. Mizara34),
- * distinct du handle Discord (ex. kaliqot).
+ * Ancien claim first-come par pseudo bot — désactivé (IDOR).
  */
 export async function claimShowmatchPlayerByNickname(
-  userId: string,
-  nicknameRaw: string,
+  _userId: string,
+  _nicknameRaw: string,
 ): Promise<{ playerId: string; nickname: string }> {
-  const nickname = nicknameRaw.trim();
-  if (nickname.length < 2 || nickname.length > 64) {
-    throw new Error("invalid_nickname");
-  }
-
-  const sb = createServiceRoleClient();
-  const profile = await loadProfileNames(userId);
-
-  if (!profile?.discord_id) {
-    throw new Error("missing_discord");
-  }
-
-  // Colonne optionnelle tant que la migration n’est pas appliquée.
-  const { error: saveError } = await sb
-    .from("profiles")
-    .update({ showmatch_nickname: nickname })
-    .eq("id", userId);
-  if (
-    saveError &&
-    !/showmatch_nickname|column .* does not exist/i.test(saveError.message)
-  ) {
-    throw saveError;
-  }
-
-  const { data: unclaimed, error: listError } = await sb
-    .from("players")
-    .select("id, discord_username")
-    .is("claimed_at", null);
-  if (listError) throw listError;
-
-  const needle = nickname.toLowerCase();
-  const needleNorm = normalizeName(nickname);
-
-  const exact = (unclaimed ?? []).filter(
-    (p) => (p.discord_username ?? "").trim().toLowerCase() === needle,
-  );
-  const normalized = (unclaimed ?? []).filter((p) => {
-    const u = (p.discord_username ?? "").trim();
-    return u.length > 0 && normalizeName(u) === needleNorm;
-  });
-
-  let matchId: string;
-  if (exact.length === 1) {
-    matchId = exact[0].id;
-  } else if (exact.length > 1) {
-    throw new Error("ambiguous_nickname");
-  } else if (normalized.length === 1) {
-    matchId = normalized[0].id;
-  } else if (normalized.length > 1) {
-    throw new Error("ambiguous_nickname");
-  } else {
-    throw new Error("nickname_not_found");
-  }
-
-  const playerId = await linkDiscordShowmatchPlayer({
-    userId,
-    providerId: profile.discord_id,
-    identityData: {
-      preferred_username: profile.username,
-      user_name: profile.username,
-      global_name: profile.global_name,
-      full_name: profile.global_name ?? profile.display_name,
-      name: nickname,
-      showmatch_nickname: nickname,
-      avatar_url: profile.avatar_url,
-    },
-  });
-
-  if (!playerId) {
-    throw new Error("claim_failed");
-  }
-
-  // Si le matching par noms était ambigu, force le merge du joueur historique.
-  const { data: stillUnmerged } = await sb
-    .from("players")
-    .select("id, auth_user_id")
-    .eq("id", matchId)
-    .maybeSingle();
-
-  if (stillUnmerged && stillUnmerged.id !== playerId) {
-    if (
-      stillUnmerged.auth_user_id &&
-      stillUnmerged.auth_user_id !== userId
-    ) {
-      throw new Error("nickname_already_claimed");
-    }
-    await mergeShowmatchPlayers(matchId, playerId);
-  }
-
-  return { playerId, nickname };
+  throw new Error("claim_disabled");
 }
 
 export type UnclaimedShowmatchName = {
