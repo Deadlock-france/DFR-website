@@ -3,16 +3,10 @@ import { NextResponse } from "next/server";
 
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { SHOWMATCH_EVENTS_CACHE_TAG } from "@/lib/showmatch/data";
-
-const VALID_STATUSES = new Set([
-  "scheduled",
-  "teams_formed",
-  "in_progress",
-  "completed",
-  "cancelled",
-]);
-
-/** Validation minimale : champs requis seulement. Les champs en trop sont ignorés (pas de .strict). */
+import {
+  applyIngestScheduledAtDefault,
+  validateIngestPayload,
+} from "@/lib/showmatch/ingest-payload";
 
 function unauthorized() {
   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -38,39 +32,6 @@ function extractBearerToken(header: string | null): string | null {
   return token.trim();
 }
 
-function validatePayload(payload: unknown): string | null {
-  if (payload === null || typeof payload !== "object" || Array.isArray(payload)) {
-    return "payload must be a JSON object";
-  }
-
-  const body = payload as Record<string, unknown>;
-
-  if (body.schema_version !== 1) {
-    return "schema_version must be 1";
-  }
-
-  if (typeof body.showmatch_id !== "string" || !body.showmatch_id.trim()) {
-    return "showmatch_id is required";
-  }
-
-  if (typeof body.scheduled_at !== "string" || !body.scheduled_at.trim()) {
-    return "scheduled_at is required";
-  }
-
-  if (
-    typeof body.status !== "string" ||
-    !VALID_STATUSES.has(body.status)
-  ) {
-    return "status must be scheduled, teams_formed, in_progress, completed, or cancelled";
-  }
-
-  if (body.series !== undefined && !Array.isArray(body.series)) {
-    return "series must be an array when provided";
-  }
-
-  return null;
-}
-
 export async function POST(request: Request) {
   const ingestSecret = process.env.SHOWMATCH_INGEST_SECRET;
   if (!ingestSecret) {
@@ -92,7 +53,8 @@ export async function POST(request: Request) {
     return badRequest("Invalid JSON body");
   }
 
-  const validationError = validatePayload(payload);
+  const ingestPayload = applyIngestScheduledAtDefault(payload);
+  const validationError = validateIngestPayload(ingestPayload);
   if (validationError) {
     return badRequest(validationError);
   }
@@ -100,7 +62,7 @@ export async function POST(request: Request) {
   try {
     const supabase = createServiceRoleClient();
     const { data, error } = await supabase.rpc("ingest_showmatch", {
-      payload,
+      payload: ingestPayload,
     });
 
     if (error) {
