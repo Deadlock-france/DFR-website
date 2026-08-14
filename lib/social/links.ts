@@ -1,5 +1,5 @@
-/** Invitation Discord Deadlock France (même lien que le CTA accueil). */
-export const DISCORD_INVITE_URL = "https://discord.gg/g7e6vn6US9";
+/** Invitation Discord Deadlock France (lien vanille / annonce). */
+export const DISCORD_INVITE_URL = "https://discord.gg/deadlockfrance";
 
 /** Compte X / Twitter officiel Deadlock France. */
 export const TWITTER_URL = "https://x.com/DeadlockFR";

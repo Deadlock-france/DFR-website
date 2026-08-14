@@ -39,7 +39,7 @@ export default function SidebarSocialCard({
             Communauté francophone
           </p>
           <p className="mt-0.5 text-[0.7rem] leading-snug text-muted-foreground">
-            Matchmaking, events et actus entre joueurs FR.
+            Matchmaking, events et actus entre joueurs francophones.
           </p>
         </div>
 

@@ -1,3 +1,5 @@
+import { normalizeIngestDateTime } from "@/lib/showmatch/timezone";
+
 const VALID_STATUSES = new Set([
   "scheduled",
   "teams_formed",
@@ -38,7 +40,9 @@ export function validateIngestPayload(payload: unknown): string | null {
 
 /**
  * Si `scheduled_at` est absent / vide / non-string, on le remplit avec l’instant d’ingest.
- * Une date explicite (ISO) est conservée telle quelle.
+ * Une date avec fuseau (Z / ±offset) est normalisée en ISO UTC.
+ * Une date naïve (sans fuseau) est interprétée comme heure Europe/Paris
+ * — cas fréquent côté bot Discord.
  */
 export function applyIngestScheduledAtDefault(
   payload: unknown,
@@ -51,7 +55,9 @@ export function applyIngestScheduledAtDefault(
   const body = payload as Record<string, unknown>;
   const scheduled = body.scheduled_at;
   if (typeof scheduled === "string" && scheduled.trim()) {
-    return payload;
+    const normalized = normalizeIngestDateTime(scheduled);
+    if (normalized === scheduled) return payload;
+    return { ...body, scheduled_at: normalized };
   }
 
   return { ...body, scheduled_at: nowIso() };

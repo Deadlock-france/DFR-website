@@ -43,8 +43,8 @@ export default function HomeCommunity() {
             Communauté francophone
           </h2>
           <p className="mt-3 max-w-md text-base leading-relaxed text-foreground/85">
-            Retrouve les joueurs FR sur Discord pour le matchmaking, les events
-            et les annonces.
+            Retrouve les joueurs francophones sur Discord pour le matchmaking,
+            les events et les annonces.
           </p>
 
           <div className="mt-7 flex flex-wrap gap-3">

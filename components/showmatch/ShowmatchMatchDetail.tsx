@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import RankBadge from "@/components/showmatch/RankBadge";
 import ShowmatchGamesViewer from "@/components/showmatch/ShowmatchGamesViewer";
+import ShowmatchStreamReplayLink from "@/components/showmatch/ShowmatchStreamReplayLink";
 import type {
   ShowmatchEventView,
   ShowmatchSeriesView,
@@ -83,16 +84,9 @@ export default function ShowmatchMatchDetail({
         </div>
 
         {series.streamUrls[0] ? (
-          <p className="mt-4 text-center">
-            <a
-              href={series.streamUrls[0]}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm text-[#58a484] underline-offset-2 hover:underline"
-            >
-              Voir le stream
-            </a>
-          </p>
+          <div className="flex justify-center">
+            <ShowmatchStreamReplayLink href={series.streamUrls[0]} />
+          </div>
         ) : null}
       </header>
 

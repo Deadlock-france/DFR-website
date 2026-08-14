@@ -1,5 +1,7 @@
 /** Helpers d’affichage showmatch. */
 
+import { parseShowmatchInstant } from "@/lib/showmatch/timezone";
+
 export function formatMatchDuration(durationSeconds: number): string {
   const minutes = Math.floor(durationSeconds / 60);
   const seconds = durationSeconds % 60;
@@ -28,7 +30,7 @@ export function formatMatchTime(iso: string): string {
     hour: "2-digit",
     minute: "2-digit",
     timeZone: "Europe/Paris",
-  }).format(new Date(iso));
+  }).format(parseShowmatchInstant(iso));
 }
 
 export function formatMatchDateTime(iso: string): string {
@@ -39,7 +41,7 @@ export function formatMatchDateTime(iso: string): string {
     hour: "2-digit",
     minute: "2-digit",
     timeZone: "Europe/Paris",
-  }).format(new Date(iso));
+  }).format(parseShowmatchInstant(iso));
 }
 
 export function formatEventDate(isoDate: string): string {

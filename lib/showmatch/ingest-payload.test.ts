@@ -37,11 +37,20 @@ describe("applyIngestScheduledAtDefault", () => {
     ).toMatchObject({ scheduled_at: NOW });
   });
 
-  it("conserve une date ISO déjà fournie", () => {
+  it("normalise une date timezone-aware en UTC ISO", () => {
     const scheduled_at = "2026-08-13T21:00:00+02:00";
     expect(
       applyIngestScheduledAtDefault(basePayload({ scheduled_at }), () => NOW),
-    ).toEqual(basePayload({ scheduled_at }));
+    ).toEqual(basePayload({ scheduled_at: "2026-08-13T19:00:00.000Z" }));
+  });
+
+  it("interprète une date naïve comme heure de Paris", () => {
+    expect(
+      applyIngestScheduledAtDefault(
+        basePayload({ scheduled_at: "2026-08-13T21:00:00" }),
+        () => NOW,
+      ),
+    ).toEqual(basePayload({ scheduled_at: "2026-08-13T19:00:00.000Z" }));
   });
 });
 

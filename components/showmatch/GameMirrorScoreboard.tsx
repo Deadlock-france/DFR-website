@@ -1,3 +1,4 @@
+import ShowmatchDemoMatchCode from "@/components/showmatch/ShowmatchDemoMatchCode";
 import type {
   ShowmatchGameView,
   ShowmatchParticipantView,
@@ -378,6 +379,9 @@ function GameHeader({
         <p className="text-xs tabular-nums text-muted-foreground">
           {game.startedAt ? formatMatchDateTime(game.startedAt) : "—"}
         </p>
+        {game.deadlockMatchId ? (
+          <ShowmatchDemoMatchCode matchId={game.deadlockMatchId} />
+        ) : null}
       </div>
 
       <div className="flex flex-col gap-1.5 sm:items-end">
