@@ -74,6 +74,8 @@ export type AccountDockUser = {
   id: string;
   displayLabel: string;
   avatarUrl: string | null;
+  /** Allowlist site_admins (lien menu Admin). */
+  isAdmin?: boolean;
   teams: AccountDockTeam[];
   friends: AccountDockFriend[];
   pendingInvites: TeamInviteWithTeam[];

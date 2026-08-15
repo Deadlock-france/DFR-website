@@ -169,3 +169,58 @@ a {
   --bg-nav-bg: none;
   --shadow-nav-dock: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
 }
+
+/* Admin Milkdown — une surface, resize image visible */
+.news-md-editor .milkdown {
+  background: #0c1214 !important;
+  border: 1px solid #2a3538;
+  border-radius: 0;
+  box-shadow: none !important;
+  overflow: visible;
+}
+.news-md-editor .milkdown .ProseMirror {
+  min-height: 20rem;
+  padding: 1rem 1.1rem 2.5rem;
+  outline: none;
+}
+.news-md-editor .milkdown .milkdown-image-block .image-wrapper {
+  position: relative;
+  width: 100%;
+}
+.news-md-editor .milkdown .milkdown-image-block .image-wrapper img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+.news-md-editor .milkdown .milkdown-image-block {
+  width: fit-content;
+  max-width: 100%;
+}
+.news-md-editor .milkdown .milkdown-image-block[data-align="left"] {
+  margin-inline: 0;
+}
+.news-md-editor .milkdown .milkdown-image-block[data-align="center"] {
+  margin-inline: auto;
+}
+.news-md-editor .milkdown .milkdown-image-block[data-align="right"] {
+  margin-left: auto;
+  margin-right: 0;
+}
+.news-md-editor .milkdown .milkdown-image-block .image-wrapper .image-resize-handle {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: -6px;
+  height: 8px;
+  max-width: 160px;
+  width: 40%;
+  cursor: ns-resize;
+  background: #58a484;
+  opacity: 0.9;
+  border-radius: 4px;
+  z-index: 5;
+}
+.news-md-editor .milkdown .milkdown-image-block .image-wrapper .operation {
+  position: absolute;
+  z-index: 6;
+}

@@ -1,5 +1,3 @@
-import Link from "next/link";
-
 import RankBadge from "@/components/showmatch/RankBadge";
 import ShowmatchGamesViewer from "@/components/showmatch/ShowmatchGamesViewer";
 import ShowmatchStreamReplayLink from "@/components/showmatch/ShowmatchStreamReplayLink";
@@ -29,13 +27,10 @@ export default function ShowmatchMatchDetail({
       <h1 className="sr-only">
         {teamA.name} vs {teamB.name} — {event.title}, lobby {series.lobbyNumber}
       </h1>
-      <nav aria-label="Fil d'Ariane" className="flex flex-wrap items-center justify-between gap-3">
-        <Link
-          href="/showmatch"
-          className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-        >
-          ← Tous les showmatchs
-        </Link>
+      <nav
+        aria-label="Métadonnées du match"
+        className="flex flex-wrap items-center justify-end gap-3"
+      >
         <p className="text-sm tabular-nums text-muted-foreground">
           <span className="capitalize">{event.title}</span>
           <span className="mx-2 opacity-40">·</span>

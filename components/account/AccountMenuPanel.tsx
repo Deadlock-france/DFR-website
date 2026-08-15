@@ -1,6 +1,6 @@
 "use client";
 
-import { LogOut, UserRound } from "lucide-react";
+import { LogOut, Settings, UserRound } from "lucide-react";
 
 import AppLink from "@/components/AppLink";
 import { invalidateAccountClientCaches } from "@/lib/account/client-cache";
@@ -35,6 +35,18 @@ export default function AccountMenuPanel({
           <UserRound className="size-4 opacity-70" />
           Mon profil
         </AppLink>
+
+        {user.isAdmin ? (
+          <AppLink
+            href="/admin"
+            role="menuitem"
+            className="flex items-center gap-2 rounded-xl px-2.5 py-2 text-sm text-[#58a484] no-underline transition-colors hover:bg-[color:var(--nav-hover)]"
+            onClick={onNavigate}
+          >
+            <Settings className="size-4 opacity-80" />
+            Admin
+          </AppLink>
+        ) : null}
 
         <a
           href="/auth/logout"

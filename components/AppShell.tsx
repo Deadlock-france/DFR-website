@@ -13,6 +13,7 @@ import { ACCOUNT_NOTIFICATIONS_ENABLED } from "@/lib/account/features";
 
 const FOOTER_LINKS = [
   { href: "/", label: "Accueil" },
+  { href: "/news", label: "News" },
   { href: "/patch-notes", label: "Patch notes" },
   { href: "/showmatch", label: "Showmatchs" },
 ] as const;
@@ -108,7 +109,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
 function AppShellInner({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
-  if (pathname === "/acces") {
+  if (pathname === "/acces" || pathname.startsWith("/admin")) {
     return <>{children}</>;
   }
 
