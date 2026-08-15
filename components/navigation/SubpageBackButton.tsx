@@ -13,6 +13,7 @@ const TOP_LEVEL_PATHS = new Set([
   "/profil",
   "/showmatch",
   "/news",
+  "/candidatures",
 ]);
 
 function fallbackHref(pathname: string): string {

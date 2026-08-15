@@ -16,6 +16,7 @@ const FOOTER_LINKS = [
   { href: "/news", label: "News" },
   { href: "/patch-notes", label: "Patch notes" },
   { href: "/showmatch", label: "Showmatchs" },
+  { href: "/candidatures", label: "Candidatures" },
 ] as const;
 
 function ShellBody({ children }: { children: ReactNode }) {
