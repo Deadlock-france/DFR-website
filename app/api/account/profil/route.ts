@@ -9,6 +9,12 @@ import type {
   ShowmatchPlayerRef,
 } from "@/lib/account/types";
 import { profileDisplayName } from "@/lib/account/types";
+import {
+  getActiveBanForDiscordId,
+  getPendingDebanForUser,
+  listMyDebanRequests,
+} from "@/lib/admin/deban";
+import type { DebanRequest, DiscordBan } from "@/lib/admin/deban-types";
 import { createReadonlyClient } from "@/lib/supabase/server";
 import {
   getShowmatchHeroMap,
@@ -122,6 +128,21 @@ export async function GET() {
       };
     });
 
+    let activeBan: DiscordBan | null = null;
+    let pendingDeban: DebanRequest | null = null;
+    let debanRequests: DebanRequest[] = [];
+    if (profile.discord_id) {
+      try {
+        [activeBan, pendingDeban, debanRequests] = await Promise.all([
+          getActiveBanForDiscordId(profile.discord_id),
+          getPendingDebanForUser(userId),
+          listMyDebanRequests(userId),
+        ]);
+      } catch (banError) {
+        console.error("profil ban/deban lookup failed:", banError);
+      }
+    }
+
     return NextResponse.json({
       user: {
         id: userId,
@@ -131,6 +152,9 @@ export async function GET() {
         heroes,
         showmatchPlayer,
         showmatchHistory,
+        activeBan,
+        pendingDeban,
+        debanRequests,
       },
     });
   } catch (error) {

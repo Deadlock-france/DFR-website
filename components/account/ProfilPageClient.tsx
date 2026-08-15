@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import HeroPrefsSection from "@/components/account/HeroPrefsSection";
+import DebanSection from "@/components/account/DebanSection";
 import ShowmatchHistorySection from "@/components/account/ShowmatchHistorySection";
 import FadeIn from "@/components/motion/FadeIn";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/shadcn/avatar";
@@ -18,6 +19,7 @@ import type {
   ShowmatchHistoryEntry,
   ShowmatchPlayerRef,
 } from "@/lib/account/types";
+import type { DebanRequest, DiscordBan } from "@/lib/admin/deban-types";
 import type { DeadlockHero } from "@/lib/deadlock/types";
 import { cn } from "@/lib/utils";
 import { ensureBrowserSession } from "@/lib/account/session-bootstrap";
@@ -30,6 +32,9 @@ type ProfilPayload = {
   heroes?: Array<Pick<DeadlockHero, "id" | "name" | "images">>;
   showmatchPlayer?: ShowmatchPlayerRef | null;
   showmatchHistory?: ShowmatchHistoryEntry[];
+  activeBan?: DiscordBan | null;
+  pendingDeban?: DebanRequest | null;
+  debanRequests?: DebanRequest[];
 };
 
 type FlashParams = {
@@ -37,6 +42,7 @@ type FlashParams = {
   error?: string;
   claim?: string;
   claimError?: string;
+  deban?: string;
 };
 
 let cachedPayload: ProfilPayload | null | undefined;
@@ -102,11 +108,13 @@ export default function ProfilPageClient() {
     const claimError = params.get("claim_error") ?? undefined;
     const heroesFlash = params.get("heroes") ?? undefined;
     const errorFlash = params.get("error") ?? undefined;
+    const debanFlash = params.get("deban") ?? undefined;
     setFlash({
       heroes: heroesFlash,
       error: errorFlash,
       claim,
       claimError,
+      deban: debanFlash,
     });
 
     const mustRefresh =
@@ -114,7 +122,11 @@ export default function ProfilPageClient() {
       errorFlash === "heroes" ||
       errorFlash === "hero_dup" ||
       claim === "1" ||
-      Boolean(claimError);
+      Boolean(claimError) ||
+      debanFlash === "1" ||
+      Boolean(errorFlash?.startsWith("deban")) ||
+      errorFlash === "invalid_message" ||
+      errorFlash === "pending_exists";
 
     if (mustRefresh) {
       cachedPayload = undefined;
@@ -129,7 +141,8 @@ export default function ProfilPageClient() {
       params.has("claim_error") ||
       params.has("saved") ||
       params.has("heroes") ||
-      params.has("error")
+      params.has("error") ||
+      params.has("deban")
     ) {
       const url = new URL(window.location.href);
       url.searchParams.delete("invite");
@@ -139,6 +152,7 @@ export default function ProfilPageClient() {
       url.searchParams.delete("saved");
       url.searchParams.delete("heroes");
       url.searchParams.delete("error");
+      url.searchParams.delete("deban");
       const qs = url.searchParams.toString();
       window.history.replaceState(
         {},
@@ -225,6 +239,15 @@ export default function ProfilPageClient() {
       ? "Impossible d'enregistrer les héros (doublons ?)."
       : null;
 
+  const debanError =
+    flash.error === "invalid_message" ||
+    flash.error === "pending_exists" ||
+    flash.error === "deban_no_ban" ||
+    flash.error === "deban_no_discord" ||
+    flash.error === "deban_save_failed"
+      ? flash.error
+      : null;
+
   return (
     <>
       {flashMessage ? (
@@ -287,6 +310,16 @@ export default function ProfilPageClient() {
 
       <FadeIn delay={0.1} className="mt-10">
         <HeroPrefsSection heroes={heroes} prefs={prefs} />
+      </FadeIn>
+
+      <FadeIn delay={0.11} className="mt-10">
+        <DebanSection
+          ban={payload.activeBan ?? null}
+          pendingRequest={payload.pendingDeban ?? null}
+          recentRequests={payload.debanRequests ?? []}
+          flashOk={flash.deban === "1"}
+          flashError={debanError}
+        />
       </FadeIn>
 
       <FadeIn delay={0.12} className="mt-10">
