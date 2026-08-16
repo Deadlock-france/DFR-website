@@ -76,6 +76,10 @@ export default function DebanSection({
             <p className="mt-4 text-sm text-muted-foreground">
               Demande en attente envoyée le {formatDt(pendingRequest.created_at)}.
             </p>
+          ) : recentRequests.some((r) => r.status === "accepted") ? (
+            <p className="mt-4 text-sm text-[#9fd4bc]">
+              Déban approuvé — application Discord en cours via le bot.
+            </p>
           ) : (
             <form
               action={submitDebanRequestAction}

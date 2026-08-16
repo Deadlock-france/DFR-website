@@ -24,14 +24,7 @@ export default async function AdminDebanDetailPage({
   const row = await getDebanRequestAdmin(id);
   if (!row) notFound();
 
-  const errorLabel =
-    error === "webhook_not_configured"
-      ? "Webhook unban non configuré (DISCORD_UNBAN_WEBHOOK_URL / SECRET)."
-      : error?.startsWith("webhook_failed_")
-        ? `Le bot a refusé le unban (${error}). Réessaie plus tard.`
-        : error
-          ? `Erreur : ${error}`
-          : null;
+  const errorLabel = error ? `Erreur : ${error}` : null;
 
   return (
     <div className="flex flex-col gap-8">
@@ -91,7 +84,7 @@ export default async function AdminDebanDetailPage({
               value="accepted"
               className="cursor-pointer bg-[#4A9B7F] px-4 py-2 text-sm font-semibold text-white transition-[filter] hover:brightness-110"
             >
-              Accepter (unban bot)
+              Accepter (le bot unban ensuite)
             </button>
             <button
               type="submit"

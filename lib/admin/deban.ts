@@ -226,8 +226,8 @@ export async function rejectDebanRequest(input: {
 }
 
 /**
- * Accepte la demande : notifie le bot d’abord, puis lève le ban en DB.
- * Si le webhook échoue, rien n’est marqué accepté (retry possible).
+ * Accepte la demande côté site. Le ban reste actif jusqu’à ce que le bot
+ * appelle POST /api/discord/bans/ingest avec action=lift après unban Discord.
  */
 export async function acceptDebanRequest(input: {
   id: string;
@@ -246,24 +246,6 @@ export async function acceptDebanRequest(input: {
   if (!current) throw new Error("not_found");
   if (current.status !== "pending") throw new Error("not_pending");
 
-  await notifyBotUnban({
-    discordId: current.discord_id,
-    requestId: current.id,
-    adminNote: input.adminNote,
-  });
-
-  const { error: banError } = await supabase
-    .from("discord_bans")
-    .update({
-      active: false,
-      lifted_at: now,
-      lift_source: "admin_accept",
-      updated_at: now,
-    })
-    .eq("id", current.ban_id)
-    .eq("active", true);
-  if (banError) throw banError;
-
   const { data, error } = await supabase
     .from("deban_requests")
     .update({
@@ -281,31 +263,39 @@ export async function acceptDebanRequest(input: {
   return data as DebanRequest;
 }
 
-export async function notifyBotUnban(input: {
-  discordId: string;
-  requestId: string;
-  adminNote: string;
-}): Promise<void> {
-  const url = process.env.DISCORD_UNBAN_WEBHOOK_URL?.trim();
-  const secret = process.env.DISCORD_UNBAN_WEBHOOK_SECRET?.trim();
-  if (!url || !secret) {
-    throw new Error("webhook_not_configured");
-  }
+/** Demandes acceptées dont le ban Discord est encore actif (à traiter par le bot). */
+export async function listApprovedDebansAwaitingLift(): Promise<
+  Array<{
+    request_id: string;
+    discord_id: string;
+    ban_id: string;
+    admin_note: string;
+    reviewed_at: string | null;
+  }>
+> {
+  const supabase = createServiceRoleClient();
+  const { data, error } = await supabase
+    .from("deban_requests")
+    .select("id, discord_id, ban_id, admin_note, reviewed_at, discord_bans!ban_id(active)")
+    .eq("status", "accepted")
+    .order("reviewed_at", { ascending: true });
 
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      authorization: `Bearer ${secret}`,
-    },
-    body: JSON.stringify({
-      discord_id: input.discordId,
-      request_id: input.requestId,
-      admin_note: input.adminNote,
-    }),
-  });
+  if (error) throw error;
 
-  if (!response.ok) {
-    throw new Error(`webhook_failed_${response.status}`);
-  }
+  return (data ?? [])
+    .filter((row) => {
+      const banRaw = row.discord_bans as
+        | { active: boolean }
+        | { active: boolean }[]
+        | null;
+      const ban = Array.isArray(banRaw) ? banRaw[0] : banRaw;
+      return ban?.active === true;
+    })
+    .map((row) => ({
+      request_id: row.id as string,
+      discord_id: row.discord_id as string,
+      ban_id: row.ban_id as string,
+      admin_note: (row.admin_note as string) ?? "",
+      reviewed_at: (row.reviewed_at as string | null) ?? null,
+    }));
 }

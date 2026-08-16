@@ -1,45 +1,41 @@
 import { NextResponse } from "next/server";
 
-import { ingestDiscordBan } from "@/lib/admin/deban";
+import {
+  ingestDiscordBan,
+  listApprovedDebansAwaitingLift,
+} from "@/lib/admin/deban";
 import { validateBanIngestPayload } from "@/lib/admin/deban-types";
-
-function unauthorized() {
-  return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-}
+import { requireShowmatchIngestAuth } from "@/lib/bot/ingest-auth";
 
 function badRequest(message: string) {
   return NextResponse.json({ error: message }, { status: 400 });
 }
 
-function timingSafeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) return false;
-  let mismatch = 0;
-  for (let i = 0; i < a.length; i += 1) {
-    mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  }
-  return mismatch === 0;
-}
+/**
+ * Bot → site (même Bearer que `/api/showmatch/ingest` : `SHOWMATCH_INGEST_SECRET`).
+ *
+ * GET  — liste des débans admin-approuvés encore à lever sur Discord
+ * POST — change le statut ban d’un joueur
+ *   { action: "ban", discord_id, reason, banned_at?, banned_by_label? }
+ *   { action: "lift", discord_id }
+ */
+export async function GET(request: Request) {
+  const authError = requireShowmatchIngestAuth(request);
+  if (authError) return authError;
 
-function extractBearerToken(header: string | null): string | null {
-  if (!header) return null;
-  const [scheme, token] = header.split(/\s+/, 2);
-  if (!scheme || scheme.toLowerCase() !== "bearer" || !token) return null;
-  return token.trim();
+  try {
+    const pending_unbans = await listApprovedDebansAwaitingLift();
+    return NextResponse.json({ ok: true, pending_unbans });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Internal server error";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }
 
 export async function POST(request: Request) {
-  const ingestSecret = process.env.DISCORD_BANS_INGEST_SECRET;
-  if (!ingestSecret) {
-    return NextResponse.json(
-      { error: "Ingest endpoint is not configured" },
-      { status: 503 },
-    );
-  }
-
-  const token = extractBearerToken(request.headers.get("authorization"));
-  if (!token || !timingSafeEqual(token, ingestSecret)) {
-    return unauthorized();
-  }
+  const authError = requireShowmatchIngestAuth(request);
+  if (authError) return authError;
 
   let payload: unknown;
   try {
