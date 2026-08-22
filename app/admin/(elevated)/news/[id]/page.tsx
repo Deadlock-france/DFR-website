@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 
+import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import NewsEditorForm from "@/components/admin/NewsEditorForm";
 import { getNewsAdmin } from "@/lib/admin/cms";
 
@@ -13,7 +14,10 @@ export default async function AdminNewsEditPage({
   if (id === "new") {
     return (
       <div className="flex flex-col gap-6">
-        <h1 className="font-colus text-3xl tracking-wide">Nouvel article</h1>
+        <AdminPageHeader
+          title="Nouvel article"
+          description="Rédige, prévisualise, puis publie."
+        />
         <NewsEditorForm article={null} />
       </div>
     );
@@ -24,10 +28,10 @@ export default async function AdminNewsEditPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="font-colus text-3xl tracking-wide">Éditer l’article</h1>
-        <p className="mt-1 text-sm text-muted-foreground">/{article.slug}</p>
-      </div>
+      <AdminPageHeader
+        title="Éditer l’article"
+        description={`/${article.slug}`}
+      />
       <NewsEditorForm article={article} />
     </div>
   );

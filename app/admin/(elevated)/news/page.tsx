@@ -1,10 +1,15 @@
 import Link from "next/link";
 
+import AdminPageHeader from "@/components/admin/AdminPageHeader";
+import AdminStatusBadge from "@/components/admin/AdminStatusBadge";
+import { adminPanelClassName } from "@/components/admin/admin-styles";
+import { Button, buttonVariants } from "@/components/shadcn/button";
 import { deleteNewsAction } from "@/lib/admin/actions";
 import { listAllNewsAdmin } from "@/lib/admin/cms";
+import { cn } from "@/lib/utils";
 
 function formatDt(iso: string | null): string {
-  if (!iso) return "—";
+  if (!iso) return "sans date";
   return new Intl.DateTimeFormat("fr-FR", {
     dateStyle: "short",
     timeStyle: "short",
@@ -17,20 +22,18 @@ export default async function AdminNewsListPage() {
 
   return (
     <div className="flex flex-col gap-8">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="font-colus text-3xl tracking-wide">News</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Articles éditoriaux (markdown assisté).
-          </p>
-        </div>
-        <Link
-          href="/admin/news/new"
-          className="cursor-pointer bg-[#4A9B7F] px-4 py-2 text-sm font-semibold text-white transition-[filter] hover:brightness-110"
-        >
-          Nouvel article
-        </Link>
-      </div>
+      <AdminPageHeader
+        title="News"
+        description="Articles éditoriaux (markdown assisté)."
+        actions={
+          <Link
+            href="/admin/news/new"
+            className={cn(buttonVariants())}
+          >
+            Nouvel article
+          </Link>
+        }
+      />
 
       {rows.length === 0 ? (
         <p className="text-sm text-muted-foreground">Aucun article.</p>
@@ -39,44 +42,55 @@ export default async function AdminNewsListPage() {
           {rows.map((row) => (
             <li
               key={row.id}
-              className="flex flex-wrap items-center justify-between gap-3 border border-[#2a3538] bg-[#0c1214] px-4 py-3"
+              className={cn(
+                adminPanelClassName,
+                "flex flex-wrap items-center justify-between gap-3 px-4 py-3",
+              )}
             >
               <div className="min-w-0">
                 <Link
                   href={`/admin/news/${row.id}`}
-                  className="font-medium text-foreground transition-colors hover:text-[#58a484]"
+                  className="font-medium text-foreground transition-colors hover:text-primary"
                 >
                   {row.title}
                 </Link>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  /{row.slug} ·{" "}
-                  {row.status === "published" ? "Publié" : "Brouillon"} ·{" "}
-                  {formatDt(row.published_at ?? row.updated_at)}
+                <p className="mt-1 font-mono text-xs text-muted-foreground">
+                  /{row.slug} · {formatDt(row.published_at ?? row.updated_at)}
                 </p>
               </div>
-              <div className="flex items-center gap-3 text-sm">
+              <div className="flex flex-wrap items-center gap-2">
+                <AdminStatusBadge
+                  tone={row.status === "published" ? "live" : "draft"}
+                >
+                  {row.status === "published" ? "Publié" : "Brouillon"}
+                </AdminStatusBadge>
                 <Link
                   href={`/admin/news/${row.id}`}
-                  className="cursor-pointer font-medium text-[#58a484] hover:underline"
+                  className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
                 >
                   Modifier
                 </Link>
                 {row.status === "published" ? (
                   <Link
                     href={`/news/${row.slug}`}
-                    className="cursor-pointer text-muted-foreground hover:text-foreground"
+                    className={cn(
+                      buttonVariants({ variant: "ghost", size: "sm" }),
+                      "text-muted-foreground",
+                    )}
                   >
                     Voir
                   </Link>
                 ) : null}
                 <form action={deleteNewsAction}>
                   <input type="hidden" name="id" value={row.id} />
-                  <button
+                  <Button
                     type="submit"
-                    className="cursor-pointer text-[#e07070] hover:underline"
+                    variant="ghost"
+                    size="sm"
+                    className="text-destructive hover:text-destructive"
                   >
                     Supprimer
-                  </button>
+                  </Button>
                 </form>
               </div>
             </li>

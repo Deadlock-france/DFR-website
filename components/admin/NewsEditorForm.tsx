@@ -4,12 +4,18 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition, type FormEvent } from "react";
 
+import {
+  adminInputClassName,
+  adminLabelClassName,
+} from "@/components/admin/admin-styles";
 import NewsMarkdownEditor, {
   type NewsMarkdownEditorHandle,
 } from "@/components/admin/NewsMarkdownEditor";
+import { Button, buttonVariants } from "@/components/shadcn/button";
 import { saveNewsAction } from "@/lib/admin/actions";
 import type { SiteNewsArticle } from "@/lib/admin/types";
 import { slugifyNewsTitle } from "@/lib/admin/types";
+import { cn } from "@/lib/utils";
 
 function toLocalInputValue(iso: string | null): string {
   if (!iso) return "";
@@ -68,32 +74,32 @@ export default function NewsEditorForm({
     <form onSubmit={onSubmit} className="flex flex-col gap-4">
       {article ? <input type="hidden" name="id" value={article.id} /> : null}
 
-      <label className="flex flex-col gap-1 text-sm">
+      <label className={adminLabelClassName}>
         <span className="text-muted-foreground">Titre</span>
         <input
           name="title"
           required
           defaultValue={article?.title ?? ""}
-          className="border border-[#2a3538] bg-[#12181a] px-3 py-2 text-lg"
+          className={cn(adminInputClassName, "text-lg")}
         />
       </label>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <label className="flex flex-col gap-1 text-sm">
+        <label className={adminLabelClassName}>
           <span className="text-muted-foreground">Slug</span>
           <input
             name="slug"
             defaultValue={article?.slug ?? ""}
             placeholder={slugifyNewsTitle(article?.title ?? "mon-article")}
-            className="border border-[#2a3538] bg-[#12181a] px-3 py-2 font-mono text-sm"
+            className={cn(adminInputClassName, "font-mono")}
           />
         </label>
-        <label className="flex flex-col gap-1 text-sm">
+        <label className={adminLabelClassName}>
           <span className="text-muted-foreground">Statut</span>
           <select
             name="status"
             defaultValue={article?.status ?? "draft"}
-            className="border border-[#2a3538] bg-[#12181a] px-3 py-2"
+            className={adminInputClassName}
           >
             <option value="draft">Brouillon</option>
             <option value="published">Publié</option>
@@ -101,17 +107,17 @@ export default function NewsEditorForm({
         </label>
       </div>
 
-      <label className="flex flex-col gap-1 text-sm">
+      <label className={adminLabelClassName}>
         <span className="text-muted-foreground">Extrait</span>
         <textarea
           name="excerpt"
           rows={2}
           defaultValue={article?.excerpt ?? ""}
-          className="border border-[#2a3538] bg-[#12181a] px-3 py-2"
+          className={adminInputClassName}
         />
       </label>
 
-      <label className="flex flex-col gap-1 text-sm">
+      <label className={adminLabelClassName}>
         <span className="text-muted-foreground">Cover URL (optionnel)</span>
         <input
           name="cover_url"
@@ -119,21 +125,21 @@ export default function NewsEditorForm({
           inputMode="url"
           placeholder="https://…"
           defaultValue={article?.cover_url ?? ""}
-          className="border border-[#2a3538] bg-[#12181a] px-3 py-2"
+          className={adminInputClassName}
         />
       </label>
 
-      <label className="flex flex-col gap-1 text-sm">
+      <label className={adminLabelClassName}>
         <span className="text-muted-foreground">Publié le</span>
         <input
           type="datetime-local"
           name="published_at"
           defaultValue={toLocalInputValue(article?.published_at ?? null)}
-          className="border border-[#2a3538] bg-[#12181a] px-3 py-2"
+          className={adminInputClassName}
         />
       </label>
 
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-1.5">
         <span className="text-sm text-muted-foreground">Contenu (Markdown)</span>
         <NewsMarkdownEditor
           key={article?.id ?? "new"}
@@ -144,26 +150,18 @@ export default function NewsEditorForm({
       </div>
 
       {error ? (
-        <p className="text-sm text-[#e07070]" role="alert">
+        <p className="text-sm text-destructive" role="alert">
           {error}
         </p>
       ) : null}
 
       <div className="flex flex-wrap gap-3">
-        <button
-          type="submit"
-          disabled={pending}
-          className="cursor-pointer bg-[#4A9B7F] px-4 py-2 text-sm font-semibold text-white transition-[filter] hover:brightness-110 disabled:cursor-wait disabled:opacity-60"
-        >
-          {pending
-            ? "Enregistrement…"
-            : isNew
-              ? "Créer"
-              : "Enregistrer"}
-        </button>
+        <Button type="submit" disabled={pending}>
+          {pending ? "Enregistrement…" : isNew ? "Créer" : "Enregistrer"}
+        </Button>
         <Link
           href="/admin/news"
-          className="cursor-pointer px-4 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+          className={cn(buttonVariants({ variant: "ghost" }))}
         >
           Annuler
         </Link>

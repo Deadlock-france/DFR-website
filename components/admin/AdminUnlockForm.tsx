@@ -3,6 +3,14 @@
 import { FormEvent, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
+import {
+  adminInputClassName,
+  adminLabelClassName,
+  adminPanelClassName,
+} from "@/components/admin/admin-styles";
+import { Button } from "@/components/shadcn/button";
+import { cn } from "@/lib/utils";
+
 export default function AdminUnlockForm({
   displayLabel,
 }: {
@@ -50,22 +58,20 @@ export default function AdminUnlockForm({
   return (
     <form
       onSubmit={onSubmit}
-      className="mx-auto flex w-full max-w-md flex-col gap-4 border border-[#2a3538] bg-[#0c1214] px-5 py-6"
+      className={cn(adminPanelClassName, "mx-auto flex w-full max-w-md flex-col gap-5 p-6 sm:p-7")}
     >
       <div>
-        <p className="text-xs uppercase tracking-[0.16em] text-[#8a9b9f]">
-          Élévation admin
-        </p>
-        <h1 className="mt-2 font-colus text-2xl tracking-wide text-foreground">
+        <p className="text-xs text-muted-foreground">Espace admin</p>
+        <h1 className="font-colus mt-1 text-3xl tracking-[-0.02em] text-foreground">
           Second facteur
         </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
+        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
           Connecté en tant que {displayLabel}. Entre le secret admin (hors
           Discord) pour continuer.
         </p>
       </div>
 
-      <label className="flex flex-col gap-1.5 text-sm">
+      <label className={adminLabelClassName}>
         <span className="text-muted-foreground">Secret admin</span>
         <input
           type="password"
@@ -73,24 +79,20 @@ export default function AdminUnlockForm({
           autoComplete="current-password"
           value={secret}
           onChange={(e) => setSecret(e.target.value)}
-          className="border border-[#2a3538] bg-[#12181a] px-3 py-2 text-foreground outline-none focus:border-[#58a484]"
+          className={adminInputClassName}
           required
         />
       </label>
 
       {error ? (
-        <p className="text-sm text-[#e07070]" role="alert">
+        <p className="text-sm text-destructive" role="alert">
           {error}
         </p>
       ) : null}
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="bg-[#4A9B7F] px-4 py-2.5 text-sm font-semibold text-white transition-[filter] hover:brightness-105 disabled:opacity-60"
-      >
+      <Button type="submit" disabled={pending}>
         {pending ? "Vérification…" : "Déverrouiller"}
-      </button>
+      </Button>
     </form>
   );
 }

@@ -1,16 +1,25 @@
 "use client";
 
+import { Lock } from "lucide-react";
 import { useRef, useState } from "react";
 
-export default function AdminLockButton() {
+import { Button } from "@/components/shadcn/button";
+import { cn } from "@/lib/utils";
+
+export default function AdminLockButton({ className }: { className?: string }) {
   const [pending, setPending] = useState(false);
   const once = useRef(false);
 
   return (
-    <button
+    <Button
       type="button"
+      variant="ghost"
+      size="sm"
       disabled={pending}
-      className="cursor-pointer text-muted-foreground transition-colors hover:text-[#e07070] disabled:opacity-50"
+      className={cn(
+        "text-muted-foreground hover:text-destructive",
+        className,
+      )}
       onClick={async () => {
         if (once.current || pending) return;
         once.current = true;
@@ -24,7 +33,8 @@ export default function AdminLockButton() {
         window.location.replace("/admin/unlock");
       }}
     >
-      {pending ? "Verrouillage…" : "Verrouiller"}
-    </button>
+      <Lock className="size-3.5" strokeWidth={1.75} />
+      {pending ? "Verrouillage…" : "Sortir du mode admin"}
+    </Button>
   );
 }

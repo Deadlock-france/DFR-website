@@ -172,9 +172,9 @@ a {
 
 /* Admin Milkdown — une surface, resize image visible */
 .news-md-editor .milkdown {
-  background: #0c1214 !important;
-  border: 1px solid #2a3538;
-  border-radius: 0;
+  background: var(--card) !important;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
   box-shadow: none !important;
   overflow: visible;
 }

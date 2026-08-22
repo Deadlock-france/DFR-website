@@ -19,11 +19,18 @@ async function UnlockGate() {
   const identity = await requireAdminIdentity();
 
   return (
-    <div
-      className="flex min-h-dvh items-center justify-center px-4 py-10"
-      style={{ backgroundColor: "var(--bg-default)" }}
-    >
-      <AdminUnlockForm displayLabel={identity.displayLabel} />
+    <div className="relative flex min-h-dvh items-center justify-center bg-background px-4 py-10">
+      <div
+        aria-hidden
+        className="pointer-events-none fixed inset-0"
+        style={{
+          background:
+            "radial-gradient(ellipse 70% 45% at 50% 0%, color-mix(in oklab, var(--primary) 16%, transparent), transparent 58%)",
+        }}
+      />
+      <div className="relative w-full">
+        <AdminUnlockForm displayLabel={identity.displayLabel} />
+      </div>
     </div>
   );
 }
@@ -32,10 +39,7 @@ export default function AdminUnlockPage() {
   return (
     <Suspense
       fallback={
-        <main
-          className="flex min-h-dvh items-center justify-center px-4 text-sm text-muted-foreground"
-          style={{ backgroundColor: "var(--bg-default)" }}
-        >
+        <main className="flex min-h-dvh items-center justify-center bg-background px-4 text-sm text-muted-foreground">
           Chargement…
         </main>
       }

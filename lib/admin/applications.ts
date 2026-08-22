@@ -62,6 +62,23 @@ export async function insertMyApplication(input: {
   return data as SiteApplication;
 }
 
+export async function countApplicationsAdmin(
+  status?: ApplicationStatus,
+): Promise<number> {
+  const supabase = createServiceRoleClient();
+  let query = supabase
+    .from("site_applications")
+    .select("id", { count: "exact", head: true });
+
+  if (status) {
+    query = query.eq("status", status);
+  }
+
+  const { count, error } = await query;
+  if (error) throw error;
+  return count ?? 0;
+}
+
 export async function listApplicationsAdmin(
   status?: ApplicationStatus,
 ): Promise<SiteApplicationAdminRow[]> {
