@@ -1,5 +1,7 @@
 import { cacheLife, cacheTag } from "next/cache";
 
+import { readResponseJson } from "@/lib/http/json";
+
 import { attachReferenceUrls, getDeadlockIoSlugs } from "./deadlock-io";
 import { DEADLOCK_REFERENCE_LANGUAGE } from "./config";
 import { buildDeadlockReferenceIndex, finalizeReferenceIndex } from "./references";
@@ -45,13 +47,14 @@ async function fetchDeadlockAssets<T>(
   try {
     const response = await fetch(url.toString(), {
       signal: controller.signal,
+      cache: "no-store",
     });
 
     if (!response.ok) {
       throw new Error(`Deadlock API error: ${response.status} ${path}`);
     }
 
-    return (await response.json()) as T;
+    return await readResponseJson<T>(response);
   } finally {
     clearTimeout(timeout);
   }
@@ -162,10 +165,10 @@ export async function getDeadlockHeroAbilities(
   );
 }
 
-/** Index héros + items boutique + capacités, prêt pour le survol dans les patch notes. */
-export async function getDeadlockReferences(
-  language: DeadlockLanguage = DEADLOCK_REFERENCE_LANGUAGE,
-): Promise<DeadlockReferenceIndex> {
+/** Liste sérialisable (pas de Map) pour `"use cache"`. */
+async function loadDeadlockReferenceList(
+  language: DeadlockLanguage,
+): Promise<DeadlockReference[]> {
   "use cache";
   cacheLife("hours");
   cacheTag(
@@ -181,8 +184,14 @@ export async function getDeadlockReferences(
   ]);
 
   const index = buildDeadlockReferenceIndex(heroes, items);
-  const references = attachReferenceUrls(index.references, slugs, language);
+  return attachReferenceUrls(index.references, slugs, language);
+}
 
+/** Index héros + items boutique + capacités, prêt pour le survol dans les patch notes. */
+export async function getDeadlockReferences(
+  language: DeadlockLanguage = DEADLOCK_REFERENCE_LANGUAGE,
+): Promise<DeadlockReferenceIndex> {
+  const references = await loadDeadlockReferenceList(language);
   return finalizeReferenceIndex(references);
 }
 

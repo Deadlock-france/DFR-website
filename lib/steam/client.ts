@@ -1,6 +1,7 @@
 import { cacheLife, cacheTag } from "next/cache";
 
 import { translateToFrench } from "@/lib/deepl/client";
+import { readResponseJson } from "@/lib/http/json";
 import { unescapeSteamBrackets } from "@/lib/steam/text";
 
 import {
@@ -200,13 +201,14 @@ export async function getSteamNews(
   try {
     const response = await fetch(url.toString(), {
       signal: controller.signal,
+      cache: "no-store",
     });
 
     if (!response.ok) {
       throw new Error(`Steam API error: ${response.status}`);
     }
 
-    const data = (await response.json()) as SteamNewsResponse;
+    const data = await readResponseJson<SteamNewsResponse>(response);
     const items = (data.appnews?.newsitems ?? [])
       .filter(isValveCommunityAnnouncement)
       .slice(0, count);

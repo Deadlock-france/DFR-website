@@ -66,7 +66,12 @@ function stubNetwork(scenario: FetchScenario) {
   fetchMock.mockImplementation(async (input: string, init?: RequestInit) => {
     const url = String(input);
     const json = (body: unknown, ok = true, status = 200) =>
-      ({ ok, status, json: async () => body }) as Response;
+      ({
+        ok,
+        status,
+        json: async () => body,
+        text: async () => JSON.stringify(body),
+      }) as Response;
 
     if (url.includes("ISteamNews")) {
       return json(

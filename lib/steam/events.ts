@@ -1,3 +1,5 @@
+import { readResponseJson } from "@/lib/http/json";
+
 import {
   STEAM_EVENT_DETAIL_API,
   STEAM_EVENTS_PAGEABLE_API,
@@ -19,6 +21,7 @@ async function fetchJson<T>(url: string, timeoutMs = 10000): Promise<T> {
   try {
     const response = await fetch(url, {
       signal: controller.signal,
+      cache: "no-store",
       headers: { Accept: "application/json" },
     });
 
@@ -26,7 +29,7 @@ async function fetchJson<T>(url: string, timeoutMs = 10000): Promise<T> {
       throw new Error(`Steam Events API error: ${response.status}`);
     }
 
-    return (await response.json()) as T;
+    return await readResponseJson<T>(response);
   } finally {
     clearTimeout(timeout);
   }

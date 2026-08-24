@@ -1,5 +1,7 @@
 import { cacheLife, cacheTag } from "next/cache";
 
+import { readResponseJson } from "@/lib/http/json";
+
 import { getDeadlockIoBaseUrl } from "./config";
 import type { DeadlockLanguage, DeadlockReference } from "./types";
 
@@ -26,20 +28,20 @@ export async function getDeadlockIoSlugs(): Promise<DeadlockIoSlugs> {
   cacheTag(DEADLOCK_IO_SLUGS_CACHE_TAG);
 
   const [heroesResponse, itemsResponse] = await Promise.all([
-    fetch("https://deadlock.io/api/v1/heroes.json"),
-    fetch("https://deadlock.io/api/v1/items.json"),
+    fetch("https://deadlock.io/api/v1/heroes.json", { cache: "no-store" }),
+    fetch("https://deadlock.io/api/v1/items.json", { cache: "no-store" }),
   ]);
 
   if (!heroesResponse.ok || !itemsResponse.ok) {
     throw new Error("Deadlock.io slug lookup failed");
   }
 
-  const heroesPayload = (await heroesResponse.json()) as {
+  const heroesPayload = await readResponseJson<{
     heroes?: DeadlockIoHeroListItem[];
-  };
-  const itemsPayload = (await itemsResponse.json()) as {
+  }>(heroesResponse);
+  const itemsPayload = await readResponseJson<{
     items?: DeadlockIoItemListItem[];
-  };
+  }>(itemsResponse);
 
   const heroesById = new Map<number, string>();
   const itemsByClassName = new Map<string, string>();
