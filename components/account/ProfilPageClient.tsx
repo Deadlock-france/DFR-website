@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import DeleteAccountSection from "@/components/account/DeleteAccountSection";
 import HeroPrefsSection from "@/components/account/HeroPrefsSection";
 import ShowmatchHistorySection from "@/components/account/ShowmatchHistorySection";
 import FadeIn from "@/components/motion/FadeIn";
@@ -223,7 +224,9 @@ export default function ProfilPageClient() {
   const errorMessage =
     flash.error === "heroes" || flash.error === "hero_dup"
       ? "Impossible d'enregistrer les héros (doublons ?)."
-      : null;
+      : flash.error === "delete_account"
+        ? "Impossible de supprimer le compte. Réessaie."
+        : null;
 
   return (
     <>
@@ -296,6 +299,10 @@ export default function ProfilPageClient() {
           claimOk={flash.claim === "1"}
           claimError={flash.claimError ?? null}
         />
+      </FadeIn>
+
+      <FadeIn delay={0.14} className="mt-10">
+        <DeleteAccountSection deleteError={flash.error === "delete_account"} />
       </FadeIn>
     </>
   );

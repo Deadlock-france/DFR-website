@@ -17,11 +17,13 @@ export type ShowmatchStatus =
 
 export type ShowmatchPlayerRef = {
   id: string;
-  discordId: string | null;
-  steamId32: string | null;
   displayName: string;
   discordUsername: string;
   avatarUrl: string | null;
+  /** Présent seulement si `SHOWMATCH_PUBLIC_IDENTIFIERS.includeDiscordId`. */
+  discordId?: string | null;
+  /** Présent seulement si `SHOWMATCH_PUBLIC_IDENTIFIERS.includeSteamId32`. */
+  steamId32?: string | null;
 };
 
 export type ShowmatchParticipantView = {
@@ -77,7 +79,8 @@ export type ShowmatchSeriesView = {
   id: string;
   externalId: string;
   lobbyNumber: number;
-  casterDiscordId: string | null;
+  /** Présent seulement si `SHOWMATCH_PUBLIC_IDENTIFIERS.includeCasterDiscordId`. */
+  casterDiscordId?: string | null;
   streamUrls: string[];
   scoreTeam1: number;
   scoreTeam2: number;
