@@ -12,6 +12,41 @@ export interface DeadlockIoSlugs {
   itemsByClassName: ReadonlyMap<string, string>;
 }
 
+/** JSON-safe : `"use cache"` ne sérialise pas les `Map`. */
+export type DeadlockIoSlugsPayload = {
+  heroesById: Record<string, string>;
+  itemsByClassName: Record<string, string>;
+};
+
+export function deadlockIoSlugsFromPayload(
+  payload: DeadlockIoSlugsPayload,
+): DeadlockIoSlugs {
+  return {
+    heroesById: new Map(
+      Object.entries(payload.heroesById).map(([id, slug]) => [Number(id), slug]),
+    ),
+    itemsByClassName: new Map(Object.entries(payload.itemsByClassName)),
+  };
+}
+
+export function deadlockIoSlugsToPayload(
+  slugs: DeadlockIoSlugs,
+): DeadlockIoSlugsPayload {
+  return {
+    heroesById: Object.fromEntries(
+      [...slugs.heroesById].map(([id, slug]) => [String(id), slug]),
+    ),
+    itemsByClassName: Object.fromEntries(slugs.itemsByClassName),
+  };
+}
+
+function emptyDeadlockIoSlugs(): DeadlockIoSlugs {
+  return {
+    heroesById: new Map(),
+    itemsByClassName: new Map(),
+  };
+}
+
 type DeadlockIoHeroListItem = {
   heroId?: number;
   slug?: string;
@@ -22,43 +57,61 @@ type DeadlockIoItemListItem = {
   slug?: string;
 };
 
-export async function getDeadlockIoSlugs(): Promise<DeadlockIoSlugs> {
+async function loadDeadlockIoSlugsPayload(): Promise<DeadlockIoSlugsPayload> {
   "use cache";
   cacheLife("hours");
   cacheTag(DEADLOCK_IO_SLUGS_CACHE_TAG);
 
-  const [heroesResponse, itemsResponse] = await Promise.all([
-    fetch("https://deadlock.io/api/v1/heroes.json", { cache: "no-store" }),
-    fetch("https://deadlock.io/api/v1/items.json", { cache: "no-store" }),
-  ]);
+  try {
+    const [heroesResponse, itemsResponse] = await Promise.all([
+      fetch("https://deadlock.io/api/v1/heroes.json"),
+      fetch("https://deadlock.io/api/v1/items.json"),
+    ]);
 
-  if (!heroesResponse.ok || !itemsResponse.ok) {
-    throw new Error("Deadlock.io slug lookup failed");
-  }
-
-  const heroesPayload = await readResponseJson<{
-    heroes?: DeadlockIoHeroListItem[];
-  }>(heroesResponse);
-  const itemsPayload = await readResponseJson<{
-    items?: DeadlockIoItemListItem[];
-  }>(itemsResponse);
-
-  const heroesById = new Map<number, string>();
-  const itemsByClassName = new Map<string, string>();
-
-  for (const hero of heroesPayload.heroes ?? []) {
-    if (hero.heroId !== undefined && hero.slug) {
-      heroesById.set(hero.heroId, hero.slug);
+    if (!heroesResponse.ok || !itemsResponse.ok) {
+      throw new Error(
+        `Deadlock.io slug lookup failed: heroes=${heroesResponse.status} items=${itemsResponse.status}`,
+      );
     }
-  }
 
-  for (const item of itemsPayload.items ?? []) {
-    if (item.id && item.slug) {
-      itemsByClassName.set(item.id, item.slug);
+    const heroesPayload = await readResponseJson<{
+      heroes?: DeadlockIoHeroListItem[];
+    }>(heroesResponse);
+    const itemsPayload = await readResponseJson<{
+      items?: DeadlockIoItemListItem[];
+    }>(itemsResponse);
+
+    const heroesById: Record<string, string> = {};
+    const itemsByClassName: Record<string, string> = {};
+
+    for (const hero of heroesPayload.heroes ?? []) {
+      if (hero.heroId !== undefined && hero.slug) {
+        heroesById[String(hero.heroId)] = hero.slug;
+      }
     }
-  }
 
-  return { heroesById, itemsByClassName };
+    for (const item of itemsPayload.items ?? []) {
+      if (item.id && item.slug) {
+        itemsByClassName[item.id] = item.slug;
+      }
+    }
+
+    return { heroesById, itemsByClassName };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("Deadlock.io slug lookup failed:", message);
+    return { heroesById: {}, itemsByClassName: {} };
+  }
+}
+
+export async function getDeadlockIoSlugs(): Promise<DeadlockIoSlugs> {
+  try {
+    return deadlockIoSlugsFromPayload(await loadDeadlockIoSlugsPayload());
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("Deadlock.io slug lookup failed:", message);
+    return emptyDeadlockIoSlugs();
+  }
 }
 
 export function getDeadlockReferenceUrl(

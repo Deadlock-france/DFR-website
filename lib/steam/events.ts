@@ -14,14 +14,13 @@ function clanAccountIdFromSteamId(clanSteamid: string): number {
   return Number(BigInt(clanSteamid) & BigInt(0xffffffff));
 }
 
-async function fetchJson<T>(url: string, timeoutMs = 10000): Promise<T> {
+async function fetchJson<T>(url: string, timeoutMs = 30000): Promise<T> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const response = await fetch(url, {
       signal: controller.signal,
-      cache: "no-store",
       headers: { Accept: "application/json" },
     });
 

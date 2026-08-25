@@ -10,6 +10,7 @@ import {
 import { getCurrentUserId, updateDisplayName } from "@/lib/account/queries";
 import { createClient } from "@/lib/supabase/server";
 import { eraseOwnAccount } from "@/lib/account/delete-account";
+import { isAccountErasureConfirmation } from "@/lib/account/erasure-confirmation";
 import { claimShowmatchPlayerByNickname } from "@/lib/account/showmatch-claim";
 
 export async function updateDisplayNameAction(formData: FormData) {
@@ -68,10 +69,14 @@ export async function claimShowmatchNicknameAction(formData: FormData) {
   }
 }
 
-export async function deleteOwnAccountAction() {
+export async function deleteOwnAccountAction(formData: FormData) {
   const userId = await getCurrentUserId();
   if (!userId) {
     redirect("/auth/login?next=/profil");
+  }
+
+  if (!isAccountErasureConfirmation(String(formData.get("confirmation") ?? ""))) {
+    redirect("/profil?error=delete_account");
   }
 
   try {

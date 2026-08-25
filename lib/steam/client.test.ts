@@ -240,10 +240,10 @@ describe("getSteamNews", () => {
       await expect(getSteamNews()).resolves.toEqual([]);
     });
 
-    it("remonte une erreur quand l'API Steam échoue", async () => {
+    it("dégrade en liste vide quand l'API Steam échoue", async () => {
       stubNetwork({ newsOk: false, newsStatus: 502 });
 
-      await expect(getSteamNews()).rejects.toThrow("Steam API error: 502");
+      await expect(getSteamNews()).resolves.toEqual([]);
     });
   });
 

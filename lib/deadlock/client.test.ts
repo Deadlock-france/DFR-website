@@ -151,6 +151,17 @@ describe("getDeadlockHeroes", () => {
       expect.any(Object),
     );
   });
+
+  it("dégrade en liste vide si l'API héros échoue", async () => {
+    fetchMock.mockResolvedValue({
+      ok: false,
+      status: 502,
+      json: async () => ({}),
+      text: async () => "{}",
+    } as Response);
+
+    await expect(getDeadlockHeroes()).resolves.toEqual([]);
+  });
 });
 
 describe("getDeadlockHeroById", () => {

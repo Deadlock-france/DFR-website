@@ -301,7 +301,7 @@ export default function ProfilPageClient() {
         />
       </FadeIn>
 
-      <FadeIn delay={0.14} className="mt-10">
+      <FadeIn delay={0.14} className="mt-8">
         <DeleteAccountSection deleteError={flash.error === "delete_account"} />
       </FadeIn>
     </>

@@ -25,11 +25,16 @@ const EMPTY_REFERENCES: DeadlockReferencesByLanguage = {
 export async function generateStaticParams() {
   try {
     const items = await getSteamNews(1422450, 50);
-    return items.map((item) => ({ gid: item.gid }));
+    if (items.length > 0) {
+      return items.map((item) => ({ gid: item.gid }));
+    }
   } catch (error) {
-    console.error("generateStaticParams /patch-notes/[gid] failed:", error);
-    return [];
+    const message = error instanceof Error ? error.message : String(error);
+    console.error("generateStaticParams /patch-notes/[gid] failed:", message);
   }
+
+  // Cache Components refuse un tableau vide : un gid sentinelle valide la route.
+  return [{ gid: "_" }];
 }
 
 export async function generateMetadata({
