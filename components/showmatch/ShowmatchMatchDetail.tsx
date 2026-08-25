@@ -7,7 +7,7 @@ import type {
   ShowmatchEventView,
   ShowmatchSeriesView,
 } from "@/lib/showmatch/types";
-import { formatMatchDateTime } from "@/lib/showmatch/format";
+import { formatMatchDateTime, formatSeriesBestOf } from "@/lib/showmatch/format";
 
 export default function ShowmatchMatchDetail({
   series,
@@ -49,7 +49,7 @@ export default function ShowmatchMatchDetail({
 
       <header className="border border-[#2a3538] bg-[#0c1214] px-4 py-6">
         <p className="mb-4 text-center text-xs font-medium uppercase tracking-[0.18em] text-[#8a9b9f]">
-          Série BO3
+          Série {formatSeriesBestOf(series.scoreTeam1, series.scoreTeam2)}
         </p>
 
         <div className="relative mx-auto grid max-w-4xl grid-cols-3 items-center gap-2 sm:gap-4">

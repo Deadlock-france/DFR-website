@@ -1,5 +1,6 @@
 import { createOgImage, OG_CONTENT_TYPE, OG_SIZE } from "@/lib/seo/og-image";
 import { getShowmatchSeriesById } from "@/lib/showmatch/data";
+import { formatSeriesBestOf } from "@/lib/showmatch/format";
 
 export const alt = "Showmatch Deadlock France";
 export const size = OG_SIZE;
@@ -22,7 +23,7 @@ export default async function Image({
     title,
     eyebrow: "Showmatch",
     footer: series
-      ? `Lobby ${series.lobbyNumber} · BO3`
+      ? `Lobby ${series.lobbyNumber} · ${formatSeriesBestOf(series.scoreTeam1, series.scoreTeam2)}`
       : "Communauté francophone",
   });
 }

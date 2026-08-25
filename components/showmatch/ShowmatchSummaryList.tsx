@@ -10,6 +10,7 @@ import {
   formatEventDate,
   formatMatchDuration,
   formatMatchTime,
+  formatSeriesBestOf,
   formatSoulsCompact,
 } from "@/lib/showmatch/format";
 import { groupSummariesByEventDate } from "@/lib/showmatch/summaries";
@@ -277,7 +278,7 @@ function SeriesSummaryCard({ series }: { series: ShowmatchSeriesSummary }) {
 
           <div className="relative flex flex-col items-center justify-center gap-1.5 border-y border-[#2a3538] bg-[linear-gradient(180deg,#141c1e,#0e1517)] px-2 py-5 sm:py-6">
             <span className="font-colus text-sm uppercase tracking-[0.28em] text-[#6d7e82] sm:text-base">
-              BO3
+              {formatSeriesBestOf(series.scoreTeam1, series.scoreTeam2)}
             </span>
             <p className="font-colus text-3xl leading-none tracking-wide sm:text-4xl">
               <span

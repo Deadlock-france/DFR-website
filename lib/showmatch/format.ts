@@ -2,6 +2,14 @@
 
 import { parseShowmatchInstant } from "@/lib/showmatch/timezone";
 
+/** Libellé Best-of déduit du score série (2+ victoires → BO3, sinon BO1). */
+export function formatSeriesBestOf(
+  scoreTeam1: number,
+  scoreTeam2: number,
+): string {
+  return Math.max(scoreTeam1, scoreTeam2) >= 2 ? "BO3" : "BO1";
+}
+
 export function formatMatchDuration(durationSeconds: number): string {
   const minutes = Math.floor(durationSeconds / 60);
   const seconds = durationSeconds % 60;
