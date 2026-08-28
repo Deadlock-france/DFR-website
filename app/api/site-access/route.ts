@@ -2,10 +2,8 @@ import { NextResponse } from "next/server";
 
 import { safeInternalPath } from "@/lib/navigation/safe-path";
 import {
-  createSiteAccessToken,
+  attachSiteAccessCookie,
   isSiteAccessEnabled,
-  SITE_ACCESS_COOKIE,
-  SITE_ACCESS_MAX_AGE_SECONDS,
   verifySitePassword,
 } from "@/lib/site-access";
 
@@ -40,14 +38,6 @@ export async function POST(request: Request) {
 
   const safeNext = safeInternalPath(next, "/");
   const response = NextResponse.json({ ok: true, next: safeNext });
-  response.cookies.set({
-    name: SITE_ACCESS_COOKIE,
-    value: createSiteAccessToken(),
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: SITE_ACCESS_MAX_AGE_SECONDS,
-  });
+  attachSiteAccessCookie(response);
   return response;
 }

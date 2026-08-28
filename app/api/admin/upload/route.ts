@@ -2,6 +2,7 @@ import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 
 import { getElevatedAdmin } from "@/lib/admin/access";
+import { hasPermission } from "@/lib/admin/permissions";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { getSupabaseUrl } from "@/lib/supabase/env";
 
@@ -33,7 +34,7 @@ function extensionFor(mime: string, fileName: string): string {
 
 export async function POST(request: Request) {
   const admin = await getElevatedAdmin();
-  if (!admin) {
+  if (!admin || !hasPermission(admin.permissions, "admin.news")) {
     return NextResponse.json({ error: "forbidden" }, { status: 404 });
   }
 

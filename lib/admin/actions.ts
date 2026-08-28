@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
-import { requireAdmin } from "@/lib/admin/access";
+import { requirePermission } from "@/lib/admin/access";
 import {
   deleteAnnouncement,
   deleteNews,
@@ -38,7 +38,7 @@ function revalidatePublicCms() {
 }
 
 export async function saveAnnouncementAction(formData: FormData) {
-  const admin = await requireAdmin();
+  const admin = await requirePermission("admin.announcements");
   const id = String(formData.get("id") ?? "").trim();
   const title = String(formData.get("title") ?? "").trim();
   const body = String(formData.get("body") ?? "").trim();
@@ -61,7 +61,7 @@ export async function saveAnnouncementAction(formData: FormData) {
 }
 
 export async function deleteAnnouncementAction(formData: FormData) {
-  await requireAdmin();
+  await requirePermission("admin.announcements");
   const id = String(formData.get("id") ?? "").trim();
   if (!id) throw new Error("id_required");
   await deleteAnnouncement(id);
@@ -70,7 +70,7 @@ export async function deleteAnnouncementAction(formData: FormData) {
 }
 
 export async function saveNewsAction(formData: FormData) {
-  const admin = await requireAdmin();
+  const admin = await requirePermission("admin.news");
   const id = String(formData.get("id") ?? "").trim();
   const title = String(formData.get("title") ?? "").trim();
   let slug = String(formData.get("slug") ?? "").trim().toLowerCase();
@@ -129,7 +129,7 @@ export async function saveNewsAction(formData: FormData) {
 }
 
 export async function deleteNewsAction(formData: FormData) {
-  await requireAdmin();
+  await requirePermission("admin.news");
   const id = String(formData.get("id") ?? "").trim();
   if (!id) throw new Error("id_required");
   await deleteNews(id);

@@ -42,7 +42,11 @@ export default function AdminShell({
             <p className="mt-0.5 text-xs text-muted-foreground">Espace admin</p>
           </div>
 
-          <AdminNav pendingCount={pendingCount} variant="rail" />
+          <AdminNav
+            pendingCount={pendingCount}
+            permissions={identity.permissions}
+            variant="rail"
+          />
 
           <div className="mt-auto border-t border-border px-2.5 pt-4">
             <p className="truncate text-sm font-medium text-foreground">
@@ -81,7 +85,11 @@ export default function AdminShell({
                 <AdminLockButton />
               </div>
             </div>
-            <AdminNav pendingCount={pendingCount} variant="bar" />
+            <AdminNav
+              pendingCount={pendingCount}
+              permissions={identity.permissions}
+              variant="bar"
+            />
           </header>
 
           <main

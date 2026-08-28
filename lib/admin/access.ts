@@ -3,6 +3,12 @@ import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 
 import { getCurrentUserId, getProfile } from "@/lib/account/queries";
+import {
+  ADMIN_PERMISSIONS,
+  hasPermission,
+  type AdminPermission,
+} from "@/lib/admin/permissions";
+import { loadRawPermissionsForDiscordId } from "@/lib/admin/roles";
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 
 export const ADMIN_ELEVATION_COOKIE = "dfr_admin_elev";
@@ -14,6 +20,8 @@ export type AdminIdentity = {
   userId: string;
   discordId: string;
   displayLabel: string;
+  /** Permissions déjà étendues (implications Discord-like). */
+  permissions: AdminPermission[];
 };
 
 function getAdminUnlockSecret(): string | null {
@@ -94,11 +102,29 @@ export async function getAdminIdentity(): Promise<AdminIdentity | null> {
   const admin = await lookupActiveAdmin(discordId);
   if (!admin) return null;
 
+  const raw = await loadRawPermissionsForDiscordId(discordId);
+  const expanded = hasPermission(raw, "admin.administrator")
+    ? [...ADMIN_PERMISSIONS]
+    : raw.length === 0
+      ? [...ADMIN_PERMISSIONS]
+      : ADMIN_PERMISSIONS.filter((permission) =>
+          hasPermission(raw, permission),
+        );
+
   return {
     userId,
     discordId: admin.discord_id,
     displayLabel: admin.display_label,
+    permissions: expanded,
   };
+}
+
+export async function requirePermission(
+  permission: AdminPermission,
+): Promise<AdminIdentity> {
+  const identity = await requireAdmin();
+  if (!hasPermission(identity.permissions, permission)) notFound();
+  return identity;
 }
 
 /** Identité admin ou 404 (ne pas confirmer l’existence du panneau). */

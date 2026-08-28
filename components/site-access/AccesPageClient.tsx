@@ -86,6 +86,11 @@ export default function AccesPageClient() {
 
           {error ? (
             <p className="text-sm text-destructive">{error}</p>
+          ) : searchParams.get("error") === "not_admin" ? (
+            <p className="text-sm text-destructive">
+              Ce compte Discord n&apos;est pas admin. Entre le mot de passe
+              pour continuer.
+            </p>
           ) : null}
 
           <button
@@ -100,6 +105,16 @@ export default function AccesPageClient() {
             {pending ? "Vérification…" : "Entrer"}
           </button>
         </form>
+
+        <p className="mt-6 text-center text-xs text-muted-foreground">
+          Tu es admin ?{" "}
+          <a
+            href={`/auth/login?next=${encodeURIComponent(next)}`}
+            className="font-medium text-primary underline-offset-4 hover:underline"
+          >
+            Connexion Discord
+          </a>
+        </p>
       </div>
     </main>
   );

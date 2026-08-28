@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { requireUserId } from "@/lib/account/queries";
-import { requireAdmin } from "@/lib/admin/access";
+import { requirePermission } from "@/lib/admin/access";
 import {
   insertMyApplication,
   reviewApplication,
@@ -54,7 +54,7 @@ export async function submitApplicationAction(formData: FormData) {
 }
 
 export async function reviewApplicationAction(formData: FormData) {
-  const admin = await requireAdmin();
+  const admin = await requirePermission("admin.applications");
   const id = String(formData.get("id") ?? "").trim();
   const decision = String(formData.get("decision") ?? "").trim();
   const adminNote = String(formData.get("admin_note") ?? "").trim();

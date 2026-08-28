@@ -1,26 +1,60 @@
 "use client";
 
 import {
+  BarChart3,
   Inbox,
   LayoutDashboard,
   Megaphone,
-  Newspaper,
+  Shield,
+  Tags,
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import {
+  hasPermission,
+  type AdminPermission,
+} from "@/lib/admin/permissions";
 import { cn } from "@/lib/utils";
 
 const NAV = [
   { href: "/admin", label: "Tableau de bord", icon: LayoutDashboard },
-  { href: "/admin/annonces", label: "Annonces", icon: Megaphone },
-  { href: "/admin/news", label: "News", icon: Newspaper },
-  { href: "/admin/candidatures", label: "Candidatures", icon: Inbox },
+  {
+    href: "/admin/statistiques",
+    label: "Statistiques",
+    icon: BarChart3,
+    permission: "admin.stats",
+  },
+  {
+    href: "/admin/annonces",
+    label: "Annonces",
+    icon: Megaphone,
+    permission: "admin.announcements",
+  },
+  {
+    href: "/admin/candidatures",
+    label: "Candidatures",
+    icon: Inbox,
+    permission: "admin.applications",
+  },
+  {
+    href: "/admin/admins",
+    label: "Admins",
+    icon: Shield,
+    permission: "admin.members",
+  },
+  {
+    href: "/admin/roles",
+    label: "Rôles",
+    icon: Tags,
+    permission: "admin.roles",
+  },
 ] as const satisfies ReadonlyArray<{
   href: string;
   label: string;
   icon: LucideIcon;
+  permission?: AdminPermission;
 }>;
 
 function isAdminNavActive(pathname: string, href: string): boolean {
@@ -30,9 +64,11 @@ function isAdminNavActive(pathname: string, href: string): boolean {
 
 export default function AdminNav({
   pendingCount,
+  permissions,
   variant,
 }: {
   pendingCount: number;
+  permissions: readonly string[];
   variant: "rail" | "bar";
 }) {
   const pathname = usePathname();
@@ -48,9 +84,18 @@ export default function AdminNav({
       )}
     >
       {NAV.map((item) => {
+        if (
+          "permission" in item &&
+          item.permission &&
+          !hasPermission(permissions, item.permission)
+        ) {
+          return null;
+        }
+
         const active = isAdminNavActive(pathname, item.href);
         const Icon = item.icon;
-        const showBadge = item.href === "/admin/candidatures" && pendingCount > 0;
+        const showBadge =
+          item.href === "/admin/candidatures" && pendingCount > 0;
 
         return (
           <Link
