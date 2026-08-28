@@ -17,7 +17,7 @@ export default function ShowmatchClaimForm({
     <form
       action={claimShowmatchNicknameAction}
       onSubmit={() => setPending(true)}
-      className="mt-4 flex flex-col gap-3"
+      className="mt-3 flex flex-col gap-2"
     >
       <label htmlFor="showmatch_nickname" className="text-sm font-medium">
         Pseudo showmatch (bot)
@@ -35,17 +35,15 @@ export default function ShowmatchClaimForm({
         minLength={2}
         placeholder="Mizara34"
         autoComplete="off"
-        className="h-10 rounded-xl border bg-transparent px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        style={{ borderColor: "#1f2937" }}
+        className="h-10 rounded-xl border border-border bg-transparent px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
       />
       <button
         type="submit"
         disabled={pending}
         className={cn(
           buttonVariants({ size: "lg" }),
-          "w-fit border-0 font-semibold text-white disabled:opacity-60",
+          "h-11 w-fit border-0 font-semibold disabled:opacity-60",
         )}
-        style={{ backgroundColor: "#4A9B7F" }}
       >
         {pending ? "Rattachement…" : "Rattacher mon historique"}
       </button>

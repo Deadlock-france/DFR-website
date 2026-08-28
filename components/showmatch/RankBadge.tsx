@@ -1,17 +1,11 @@
-import {
-  formatRankLabel,
-  formatRankWithScore,
-  rankFromScore,
-} from "@/lib/deadlock/ranks";
+import { formatRankLabel, rankFromScore } from "@/lib/deadlock/ranks";
 import { cn } from "@/lib/utils";
 
 type RankBadgeProps = {
   score: number;
   /** Affiche le libellé à côté du badge */
   showLabel?: boolean;
-  /** Inclut la note numérique, ex. "Prosélyte IV (14.2)" */
-  showScore?: boolean;
-  size?: "sm" | "md";
+  size?: "sm" | "md" | "lg" | "xl";
   className?: string;
   /** Aligne le texte à droite (équipe Sapphire / miroir) */
   mirror?: boolean;
@@ -21,21 +15,20 @@ type RankBadgeProps = {
 const SIZE = {
   sm: { w: 20, h: 28 },
   md: { w: 32, h: 44 },
+  lg: { w: 40, h: 56 },
+  xl: { w: 52, h: 72 },
 } as const;
 
 export default function RankBadge({
   score,
   showLabel = true,
-  showScore = false,
   size = "sm",
   className,
   mirror = false,
 }: RankBadgeProps) {
   const rank = rankFromScore(score);
   const { w, h } = SIZE[size];
-  const label = showScore
-    ? formatRankWithScore(score)
-    : formatRankLabel(score);
+  const label = formatRankLabel(score);
 
   return (
     <span
@@ -44,7 +37,7 @@ export default function RankBadge({
         mirror && "flex-row-reverse",
         className,
       )}
-      title={formatRankWithScore(score)}
+      title={label}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img

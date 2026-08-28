@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 
 import ProfilPageClient from "@/components/account/ProfilPageClient";
-import FadeIn from "@/components/motion/FadeIn";
 import { buildNoIndexMetadata } from "@/lib/seo/metadata";
 
 export const metadata: Metadata = buildNoIndexMetadata({
@@ -17,16 +16,7 @@ export const metadata: Metadata = buildNoIndexMetadata({
  */
 export default function ProfilPage() {
   return (
-    <div className="w-full px-4 py-10 sm:px-5 lg:px-8">
-      <FadeIn>
-        <h1 className="font-colus text-3xl tracking-[-0.02em] text-foreground sm:text-4xl">
-          Mon profil
-        </h1>
-        <p className="mt-2 max-w-xl text-sm text-muted-foreground sm:text-base">
-          Identité Discord, héros préférés et historique showmatch.
-        </p>
-      </FadeIn>
-
+    <div className="w-full px-4 pt-6 pb-8 sm:px-5 lg:px-8">
       <ProfilPageClient />
     </div>
   );

@@ -11,7 +11,7 @@ type Listener = () => void;
 const listeners = new Set<Listener>();
 
 export const ACCOUNT_ME_STORAGE_KEY = "dfr-account-me-v2";
-export const ACCOUNT_PROFIL_STORAGE_KEY = "dfr-account-profil-v1";
+export const ACCOUNT_PROFIL_STORAGE_KEY = "dfr-account-profil-v2";
 
 export function subscribeAccountInvalidation(listener: Listener): () => void {
   listeners.add(listener);

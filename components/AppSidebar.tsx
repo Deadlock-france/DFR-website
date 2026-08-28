@@ -321,7 +321,7 @@ function AppSidebarInner() {
                 }}
               >
                 <p className="truncate text-sm leading-tight font-bold tracking-tight text-foreground">
-                  Deadlock Actus
+                  Deadlock France
                 </p>
               </div>
             </Link>

@@ -26,15 +26,11 @@ export default function DeleteAccountSection({
   }
 
   return (
-    <section
-      className="rounded-2xl border px-5 py-4 sm:px-6"
-      style={{ borderColor: "#1f2937" }}
-    >
+    <section className="border-t border-border pt-3">
       <h2 className="text-sm font-medium text-muted-foreground">Paramètres</h2>
 
       <details
-        className="group mt-3 border-t pt-3"
-        style={{ borderColor: "#1f2937" }}
+        className="group mt-1"
         open={open}
         onToggle={(event) => {
           const next = event.currentTarget.open;
@@ -42,7 +38,7 @@ export default function DeleteAccountSection({
           if (!next) resetConfirmation();
         }}
       >
-        <summary className="flex cursor-pointer list-none items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground [&::-webkit-details-marker]:hidden [&::marker]:hidden">
+        <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground [&::-webkit-details-marker]:hidden [&::marker]:hidden">
           <ChevronRight
             aria-hidden
             className="size-3.5 shrink-0 transition-transform group-open:rotate-90"
@@ -50,7 +46,7 @@ export default function DeleteAccountSection({
           Supprimer le compte
         </summary>
 
-        <div className="mt-3 max-w-lg pl-5">
+        <div className="max-w-lg pt-1 pb-1 pl-5">
           <p className="text-xs leading-relaxed text-muted-foreground">
             Ton compte est effacé (profil, équipes, chat). Les archives de
             showmatch gardent le pseudo affiché au moment des matchs. Les
@@ -86,8 +82,7 @@ export default function DeleteAccountSection({
                   spellCheck={false}
                   autoFocus
                   placeholder={ACCOUNT_ERASURE_CONFIRMATION}
-                  className="mt-1.5 h-8 w-full rounded-xl border bg-transparent px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  style={{ borderColor: "#1f2937" }}
+                  className="mt-1.5 h-9 w-full rounded-xl border border-border bg-transparent px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 />
               </div>
               <div className="flex flex-wrap items-center gap-2">
@@ -95,6 +90,7 @@ export default function DeleteAccountSection({
                   type="submit"
                   variant="destructive"
                   size="sm"
+                  className="h-11"
                   disabled={!canSubmit}
                 >
                   Confirmer la suppression
@@ -103,6 +99,7 @@ export default function DeleteAccountSection({
                   type="button"
                   variant="ghost"
                   size="sm"
+                  className="h-11"
                   onClick={resetConfirmation}
                 >
                   Annuler
@@ -114,7 +111,7 @@ export default function DeleteAccountSection({
               type="button"
               variant="destructive"
               size="sm"
-              className="mt-3"
+              className="mt-3 h-11"
               onClick={() => setConfirming(true)}
             >
               Supprimer mon compte

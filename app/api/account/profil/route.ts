@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { unstable_rethrow } from "next/navigation";
 
+import { toPlayerRankSnapshot } from "@/lib/account/player-rank";
 import { getCurrentUserId } from "@/lib/account/queries";
+import {
+  earnedShowmatchBadges,
+  tallyShowmatchBadgeStats,
+} from "@/lib/account/showmatch-badges";
 import type {
   Profile,
   ProfileHeroPref,
@@ -9,11 +14,13 @@ import type {
   ShowmatchPlayerRef,
 } from "@/lib/account/types";
 import { profileDisplayName } from "@/lib/account/types";
-import { createReadonlyClient } from "@/lib/supabase/server";
+import { toSteamAccountId } from "@/lib/deadlock/steam-id";
 import {
   getShowmatchHeroMap,
   resolveShowmatchHero,
 } from "@/lib/showmatch/heroes";
+import { createServiceRoleClient } from "@/lib/supabase/admin";
+import { createReadonlyClient } from "@/lib/supabase/server";
 
 export async function GET() {
   try {
@@ -23,6 +30,7 @@ export async function GET() {
     }
 
     const supabase = await createReadonlyClient();
+    const admin = createServiceRoleClient();
 
     const [profileRes, prefsRes, playerRes] = await Promise.all([
       supabase.from("profiles").select("*").eq("id", userId).maybeSingle(),
@@ -31,9 +39,11 @@ export async function GET() {
         .select("*")
         .eq("profile_id", userId)
         .order("priority", { ascending: true }),
-      supabase
+      admin
         .from("players")
-        .select("id, discord_username, display_name, claimed_at")
+        .select(
+          "id, discord_username, display_name, claimed_at, steam_id32, ranked_badge, ranked_fetched_at",
+        )
         .eq("auth_user_id", userId)
         .maybeSingle(),
     ]);
@@ -58,7 +68,13 @@ export async function GET() {
         }
       : null;
 
-    const [statsRes, heroMap] = await Promise.all([
+    const rank = toPlayerRankSnapshot({
+      hasSteam: toSteamAccountId(playerRow?.steam_id32 as string | null) != null,
+      badge: (playerRow?.ranked_badge as number | null) ?? null,
+      fetchedAt: (playerRow?.ranked_fetched_at as string | null) ?? null,
+    });
+
+    const [statsRes, badgeStatsRes, heroMap] = await Promise.all([
       showmatchPlayer
         ? supabase
             .from("player_showmatch_stats")
@@ -69,10 +85,26 @@ export async function GET() {
             .order("scheduled_at", { ascending: false })
             .limit(30)
         : Promise.resolve({ data: [] as Record<string, unknown>[], error: null }),
+      showmatchPlayer
+        ? supabase
+            .from("player_showmatch_stats")
+            .select("won, is_mvp")
+            .eq("player_id", showmatchPlayer.id)
+        : Promise.resolve({ data: [] as Record<string, unknown>[], error: null }),
       getShowmatchHeroMap(),
     ]);
 
     if (statsRes.error) throw statsRes.error;
+    if (badgeStatsRes.error) throw badgeStatsRes.error;
+
+    const showmatchBadges = earnedShowmatchBadges(
+      tallyShowmatchBadgeStats(
+        (badgeStatsRes.data ?? []) as Array<{
+          won?: boolean | null;
+          is_mvp?: boolean | null;
+        }>,
+      ),
+    );
 
     const showmatchHistory: ShowmatchHistoryEntry[] = (statsRes.data ?? []).map(
       (row) => {
@@ -131,6 +163,8 @@ export async function GET() {
         heroes,
         showmatchPlayer,
         showmatchHistory,
+        showmatchBadges,
+        rank,
       },
     });
   } catch (error) {

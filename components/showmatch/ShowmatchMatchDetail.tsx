@@ -27,6 +27,7 @@ export default function ShowmatchMatchDetail({
       <h1 className="sr-only">
         {teamA.name} vs {teamB.name} — {event.title}, lobby {series.lobbyNumber}
       </h1>
+
       <header className="border border-[#2a3538] bg-[#0c1214]">
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-[#2a3538] px-4 py-3">
           <p className="min-w-0 text-sm text-muted-foreground">

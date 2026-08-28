@@ -1,3 +1,5 @@
+export type { ShowmatchBadge, ShowmatchBadgeId } from "./showmatch-badges";
+
 export type TeamMemberRole = "captain" | "member" | "substitute";
 
 export type InviteRole = "member" | "substitute";
@@ -93,6 +95,15 @@ export type ShowmatchPlayerRef = {
   discordUsername: string;
   displayName: string;
   claimedAt: string | null;
+};
+
+/** Rang Deadlock mis en cache (badge Valve, sans Steam ID ni points). */
+export type PlayerRankSnapshot = {
+  hasSteam: boolean;
+  badge: number | null;
+  fetchedAt: string | null;
+  canRefresh: boolean;
+  nextRefreshAt: string | null;
 };
 
 /** Une participation de game pour l’historique profil. */

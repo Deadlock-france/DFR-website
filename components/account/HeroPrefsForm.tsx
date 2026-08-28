@@ -1,22 +1,31 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { saveHeroPrefsAction } from "@/app/profil/player-actions";
-import { buttonVariants } from "@/components/shadcn/button";
 import type { DeadlockHero } from "@/lib/deadlock/types";
 import type { ProfileHeroPref } from "@/lib/account/types";
 import { cn } from "@/lib/utils";
 
 type Priority = 1 | 2 | 3;
 
-function heroImage(hero: DeadlockHero | undefined): string | null {
+function heroCardImage(hero: DeadlockHero | undefined): string | null {
   if (!hero) return null;
   return (
     hero.images.icon_hero_card_webp ||
     hero.images.icon_hero_card ||
     hero.images.icon_image_small_webp ||
     hero.images.icon_image_small ||
+    null
+  );
+}
+
+function heroIcon(hero: DeadlockHero): string | null {
+  return (
+    hero.images.icon_image_small_webp ||
+    hero.images.icon_image_small ||
+    hero.images.icon_hero_card_webp ||
+    hero.images.icon_hero_card ||
     null
   );
 }
@@ -29,12 +38,22 @@ function initialSelection(prefs: ProfileHeroPref[]): Record<Priority, number | n
   };
 }
 
+function isSelectionDirty(
+  selection: Record<Priority, number | null>,
+  prefs: ProfileHeroPref[],
+): boolean {
+  const initial = initialSelection(prefs);
+  return ([1, 2, 3] as const).some((priority) => selection[priority] !== initial[priority]);
+}
+
 export default function HeroPrefsForm({
   heroes,
   prefs,
+  onDirtyChange,
 }: {
   heroes: DeadlockHero[];
   prefs: ProfileHeroPref[];
+  onDirtyChange?: (dirty: boolean) => void;
 }) {
   const selectable = heroes
     .filter((h) => h.player_selectable && !h.disabled)
@@ -45,6 +64,10 @@ export default function HeroPrefsForm({
 
   const [selection, setSelection] = useState(initialSelection(prefs));
   const [activeSlot, setActiveSlot] = useState<Priority>(1);
+
+  useEffect(() => {
+    onDirtyChange?.(isSelectionDirty(selection, prefs));
+  }, [selection, prefs, onDirtyChange]);
 
   function assignHero(heroId: number) {
     setSelection((prev) => {
@@ -65,7 +88,11 @@ export default function HeroPrefsForm({
   }
 
   return (
-    <form action={saveHeroPrefsAction} className="flex flex-col gap-5">
+    <form
+      id="hero-prefs-form"
+      action={saveHeroPrefsAction}
+      className="flex flex-col gap-4"
+    >
       {([1, 2, 3] as const).map((priority) => (
         <input
           key={priority}
@@ -80,41 +107,26 @@ export default function HeroPrefsForm({
           const hero = selection[priority]
             ? byId.get(selection[priority] as number)
             : undefined;
-          const image = heroImage(hero);
+          const image = heroCardImage(hero);
           const active = activeSlot === priority;
 
           return (
             <div
               key={priority}
               className={cn(
-                "flex items-center gap-3 rounded-xl border p-3 transition-[border-color,background-color]",
-                active && "ring-2 ring-[#4A9B7F]/60",
+                "flex items-center gap-3 rounded-xl border border-border p-3 transition-[border-color,background-color]",
+                active && "border-primary/55 bg-primary/10 ring-2 ring-primary/50",
               )}
-              style={{
-                borderColor: active ? "rgba(74, 155, 127, 0.55)" : "#1f2937",
-                backgroundColor: active
-                  ? "rgba(74, 155, 127, 0.08)"
-                  : undefined,
-              }}
             >
               <button
                 type="button"
                 onClick={() => setActiveSlot(priority)}
-                className="flex min-w-0 flex-1 items-center gap-3 text-left"
+                className="flex min-h-11 min-w-0 flex-1 items-center gap-3 text-left"
               >
-                <span
-                  className="flex size-7 shrink-0 items-center justify-center rounded-lg text-xs font-semibold"
-                  style={{
-                    backgroundColor: "rgba(74, 155, 127, 0.15)",
-                    color: "#6BB89A",
-                  }}
-                >
+                <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-xs font-semibold text-primary">
                   {priority}
                 </span>
-                <div
-                  className="relative size-12 shrink-0 overflow-hidden rounded-lg"
-                  style={{ backgroundColor: "rgba(255,255,255,0.04)" }}
-                >
+                <div className="relative size-11 shrink-0 overflow-hidden rounded-lg bg-muted">
                   {image ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -139,7 +151,7 @@ export default function HeroPrefsForm({
                 <button
                   type="button"
                   onClick={() => clearSlot(priority)}
-                  className="shrink-0 rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-white/5 hover:text-foreground"
+                  className="flex size-11 shrink-0 items-center justify-center rounded-md text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
                   aria-label={`Retirer priorité ${priority}`}
                 >
                   ×
@@ -151,13 +163,13 @@ export default function HeroPrefsForm({
       </div>
 
       <div>
-        <p className="mb-3 text-sm text-muted-foreground">
+        <p className="mb-2 text-sm text-muted-foreground">
           Clique un héros pour l&apos;assigner à la{" "}
           <span className="text-foreground">priorité {activeSlot}</span>.
         </p>
-        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
+        <div className="grid grid-cols-5 gap-1.5 sm:grid-cols-7 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12">
           {selectable.map((hero) => {
-            const image = heroImage(hero);
+            const image = heroIcon(hero);
             const assignedPriority = ([1, 2, 3] as const).find(
               (p) => selection[p] === hero.id,
             );
@@ -169,42 +181,29 @@ export default function HeroPrefsForm({
                 type="button"
                 onClick={() => assignHero(hero.id)}
                 className={cn(
-                  "group relative flex flex-col overflow-hidden rounded-xl border text-left transition-[border-color,transform,background-color]",
-                  "hover:bg-white/3 hover:border-[rgba(74,155,127,0.45)]",
-                  isActivePick && "ring-2 ring-[#4A9B7F]/70",
+                  "group relative flex flex-col items-center gap-1 rounded-lg border border-border p-1.5 transition-[border-color,background-color]",
+                  "hover:border-primary/45 hover:bg-muted/40",
+                  assignedPriority && "border-primary/50 bg-primary/10",
+                  isActivePick && "ring-2 ring-primary/70",
                 )}
-                style={{
-                  borderColor: assignedPriority
-                    ? "rgba(74, 155, 127, 0.5)"
-                    : "#1f2937",
-                  backgroundColor: assignedPriority
-                    ? "rgba(74, 155, 127, 0.08)"
-                    : undefined,
-                }}
                 title={hero.name}
               >
-                <div
-                  className="relative aspect-4/5 w-full overflow-hidden"
-                  style={{ backgroundColor: "rgba(255,255,255,0.04)" }}
-                >
+                <div className="relative size-10 overflow-hidden rounded-md bg-muted sm:size-11">
                   {image ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={image}
                       alt=""
-                      className="size-full object-cover transition-transform group-hover:scale-[1.03]"
+                      className="size-full object-cover"
                     />
                   ) : null}
                   {assignedPriority ? (
-                    <span
-                      className="absolute left-1.5 top-1.5 flex size-6 items-center justify-center rounded-md text-xs font-bold text-white"
-                      style={{ backgroundColor: "#4A9B7F" }}
-                    >
+                    <span className="absolute top-0.5 left-0.5 flex size-4 items-center justify-center rounded bg-primary text-[9px] font-bold text-primary-foreground">
                       {assignedPriority}
                     </span>
                   ) : null}
                 </div>
-                <p className="truncate px-2 py-1.5 text-center text-xs font-medium text-foreground">
+                <p className="w-full truncate text-center text-[10px] leading-tight text-foreground">
                   {hero.name}
                 </p>
               </button>
@@ -212,17 +211,6 @@ export default function HeroPrefsForm({
           })}
         </div>
       </div>
-
-      <button
-        type="submit"
-        className={cn(
-          buttonVariants({ size: "lg" }),
-          "w-fit border-0 font-semibold text-white",
-        )}
-        style={{ backgroundColor: "#4A9B7F" }}
-      >
-        Enregistrer les héros
-      </button>
     </form>
   );
 }

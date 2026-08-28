@@ -190,7 +190,6 @@ function TeamBlock({
               <RankBadge
                 score={avgRank}
                 size="sm"
-                showScore
                 mirror={mirror}
                 className="normal-case tracking-normal"
               />
