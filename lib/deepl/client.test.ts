@@ -3,14 +3,15 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { translateToFrench } from "./client";
 
 function translationResponse(text: string, ok = true, status = 200) {
+  const payload = ok
+    ? { translations: [{ detected_source_language: "EN", text }] }
+    : { message: `mock error ${status}` };
+
   return {
     ok,
     status,
-    json: async () => ({
-      translations: [{ detected_source_language: "EN", text }],
-    }),
-    text: async () =>
-      JSON.stringify({ message: `mock error ${status}` }),
+    json: async () => payload,
+    text: async () => JSON.stringify(payload),
   } as Response;
 }
 
@@ -291,7 +292,7 @@ describe("translateToFrench", () => {
         ok: true,
         status: 200,
         json: async () => ({ translations: [] }),
-        text: async () => "",
+        text: async () => JSON.stringify({ translations: [] }),
       } as Response);
 
       await expect(translateToFrench("Hello")).resolves.toBeNull();

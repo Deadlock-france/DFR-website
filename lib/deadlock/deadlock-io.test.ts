@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   attachReferenceUrls,
+  deadlockIoSlugsFromPayload,
+  deadlockIoSlugsToPayload,
   getDeadlockReferenceUrl,
   type DeadlockIoSlugs,
 } from "./deadlock-io";
@@ -54,6 +56,18 @@ describe("getDeadlockReferenceUrl", () => {
     );
 
     expect(url).toBe("https://deadlock.io/fr/heroes/infernus");
+  });
+});
+
+describe("deadlockIoSlugs payload", () => {
+  it("reste lisible après JSON.stringify (contrainte \"use cache\")", () => {
+    const json = JSON.stringify(deadlockIoSlugsToPayload(slugs));
+    const restored = deadlockIoSlugsFromPayload(JSON.parse(json));
+
+    expect(restored.heroesById.get(1)).toBe("infernus");
+    expect(restored.itemsByClassName.get("upgrade_clip_size")).toBe(
+      "extended-magazine",
+    );
   });
 });
 

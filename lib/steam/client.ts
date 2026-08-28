@@ -1,6 +1,7 @@
 import { cacheLife, cacheTag } from "next/cache";
 
 import { translateToFrench } from "@/lib/deepl/client";
+import { readResponseJson } from "@/lib/http/json";
 import { unescapeSteamBrackets } from "@/lib/steam/text";
 
 import {
@@ -22,6 +23,13 @@ export const STEAM_NEWS_CACHE_TAG = "steam-patch-notes";
 
 /** Steam mélange presse + Valve : on demande plus large, puis on coupe. */
 const STEAM_NEWS_FETCH_MULTIPLIER = 3;
+
+/** Timeout du GET ISteamNews uniquement — pas de la localisation DeepL. */
+const STEAM_NEWS_FETCH_TIMEOUT_MS = 30_000;
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
 
 export function isValveCommunityAnnouncement(item: SteamNewsItem): boolean {
   return item.feedname === STEAM_COMMUNITY_FEED;
@@ -177,6 +185,26 @@ async function localizePatchNotes(
   );
 }
 
+async function fetchSteamNewsResponse(url: string): Promise<SteamNewsResponse> {
+  const controller = new AbortController();
+  const timeout = setTimeout(
+    () => controller.abort(),
+    STEAM_NEWS_FETCH_TIMEOUT_MS,
+  );
+
+  try {
+    const response = await fetch(url, { signal: controller.signal });
+
+    if (!response.ok) {
+      throw new Error(`Steam API error: ${response.status}`);
+    }
+
+    return await readResponseJson<SteamNewsResponse>(response);
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 export async function getSteamNews(
   appId: number = 1422450,
   count: number = 50,
@@ -194,26 +222,18 @@ export async function getSteamNews(
     String(Math.max(count * STEAM_NEWS_FETCH_MULTIPLIER, count)),
   );
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 10000);
-
   try {
-    const response = await fetch(url.toString(), {
-      signal: controller.signal,
-    });
-
-    if (!response.ok) {
-      throw new Error(`Steam API error: ${response.status}`);
-    }
-
-    const data = (await response.json()) as SteamNewsResponse;
+    const data = await fetchSteamNewsResponse(url.toString());
     const items = (data.appnews?.newsitems ?? [])
       .filter(isValveCommunityAnnouncement)
       .slice(0, count);
 
     return localizePatchNotes(items, appId);
-  } finally {
-    clearTimeout(timeout);
+  } catch (error) {
+    // Un throw ici est mis en cache par `"use cache"` et fait échouer le
+    // prerender même si l'appelant attrape l'erreur.
+    console.error("getSteamNews failed:", errorMessage(error));
+    return [];
   }
 }
 

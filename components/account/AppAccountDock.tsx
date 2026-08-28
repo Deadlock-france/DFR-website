@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { usePathname } from "next/navigation";
 
 import AccountMenuPanel from "@/components/account/AccountMenuPanel";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/shadcn/avatar";
@@ -33,6 +34,7 @@ export default function AppAccountDock({
 }: {
   user: AccountDockUser | null;
 }) {
+  const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState<MenuPosition | null>(null);
   const [mounted, setMounted] = useState(false);
@@ -130,6 +132,8 @@ export default function AppAccountDock({
           document.body,
         )
       : null;
+
+  if (pathname === "/profil") return null;
 
   return (
     <>

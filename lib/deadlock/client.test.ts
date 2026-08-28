@@ -61,7 +61,12 @@ function stubNetwork(scenario: {
   fetchMock.mockImplementation(async (input: string) => {
     const url = String(input);
     const json = (body: unknown, ok = true, status = 200) =>
-      ({ ok, status, json: async () => body }) as Response;
+      ({
+        ok,
+        status,
+        json: async () => body,
+        text: async () => JSON.stringify(body),
+      }) as Response;
 
     if (url.includes("deadlock.io/api/v1/heroes.json")) {
       return json({
@@ -145,6 +150,17 @@ describe("getDeadlockHeroes", () => {
       expect.stringContaining("only_active=true"),
       expect.any(Object),
     );
+  });
+
+  it("dégrade en liste vide si l'API héros échoue", async () => {
+    fetchMock.mockResolvedValue({
+      ok: false,
+      status: 502,
+      json: async () => ({}),
+      text: async () => "{}",
+    } as Response);
+
+    await expect(getDeadlockHeroes()).resolves.toEqual([]);
   });
 });
 

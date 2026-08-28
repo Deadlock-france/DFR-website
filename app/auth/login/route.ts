@@ -19,7 +19,8 @@ export async function GET(request: Request) {
     provider: "discord",
     options: {
       redirectTo: `${origin}/auth/callback?next=${encodeURIComponent(next)}`,
-      scopes: "identify email",
+      // identify suffit : le site n’envoie pas d’e-mail (minimisation RGPD).
+      scopes: "identify",
     },
   });
 

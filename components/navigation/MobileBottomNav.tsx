@@ -286,7 +286,7 @@ function MobileBottomNavInner({
             <Share2 className="size-5" />
           </Button>
 
-          {!user ? (
+          {pathname === "/profil" ? null : !user ? (
             <a
               href="/auth/login?next=/profil"
               aria-label="Connexion"

@@ -2,7 +2,11 @@ import AppLink from "@/components/AppLink";
 import ShowmatchClaimForm from "@/components/account/ShowmatchClaimForm";
 import { ACCOUNT_SHOWMATCH_NICKNAME_CLAIM_ENABLED } from "@/lib/account/features";
 import type { ShowmatchHistoryEntry } from "@/lib/account/types";
-import { formatMatchDateTime, formatMatchDuration } from "@/lib/showmatch/format";
+import {
+  formatMatchDateTime,
+  formatMatchDuration,
+  formatSoulsCompact,
+} from "@/lib/showmatch/format";
 import { cn } from "@/lib/utils";
 
 const CLAIM_ERROR_MESSAGES: Record<string, string> = {
@@ -17,6 +21,12 @@ const CLAIM_ERROR_MESSAGES: Record<string, string> = {
   claim_disabled:
     "Le rattachement par pseudo n’est plus disponible. Connecte-toi avec Discord.",
 };
+
+function sideClass(side: ShowmatchHistoryEntry["teamSide"]) {
+  if (side === "sapphire") return "text-[#7ec0f0]";
+  if (side === "amber") return "text-[#f0b35a]";
+  return "text-foreground";
+}
 
 export default function ShowmatchHistorySection({
   entries,
@@ -33,64 +43,60 @@ export default function ShowmatchHistorySection({
     ? (CLAIM_ERROR_MESSAGES[claimError] ?? "Impossible de rattacher ce pseudo.")
     : null;
 
+  const wins = entries.filter((entry) => entry.won === true).length;
+  const losses = entries.filter((entry) => entry.won === false).length;
+  const hasRecord = wins + losses > 0;
+
   return (
-    <div>
-      <h2 className="mb-1 font-colus text-2xl tracking-[-0.02em]">
-        Historique showmatch
-      </h2>
-      <p className="mb-4 text-sm text-muted-foreground">
-        Parties rattachées à ton compte Discord. Le rattachement se fait via
-        l’identifiant Discord, pas via un pseudo libre.
-      </p>
+    <section className="min-w-0">
+      <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+        <h2 className="text-sm font-semibold text-foreground">
+          Historique showmatch
+        </h2>
+        {entries.length > 0 ? (
+          <p className="text-xs tabular-nums text-muted-foreground">
+            {entries.length} game{entries.length > 1 ? "s" : ""}
+            {hasRecord ? ` · ${wins}V ${losses}D` : ""}
+            {showmatchNickname ? ` · ${showmatchNickname}` : ""}
+          </p>
+        ) : null}
+      </div>
 
       {claimOk ? (
-        <p
-          className="mb-4 rounded-2xl border px-4 py-3 text-sm text-[#6BB89A]"
-          style={{
-            borderColor: "rgba(74, 155, 127, 0.45)",
-            backgroundColor: "rgba(74, 155, 127, 0.08)",
-          }}
-        >
+        <p className="mb-2 rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 text-sm text-primary">
           Historique rattaché
           {showmatchNickname ? ` sous « ${showmatchNickname} »` : ""}.
         </p>
       ) : null}
 
       {errorMessage ? (
-        <p
-          className="mb-4 rounded-2xl border px-4 py-3 text-sm text-[#e8a14a]"
-          style={{
-            borderColor: "rgba(232, 161, 74, 0.4)",
-            backgroundColor: "rgba(232, 161, 74, 0.08)",
-          }}
-        >
+        <p className="mb-2 rounded-lg border border-[#e8a14a]/40 bg-[#e8a14a]/10 px-3 py-2 text-sm text-[#e8a14a]">
           {errorMessage}
         </p>
       ) : null}
 
       {entries.length === 0 ? (
-        <div
-          className="rounded-2xl border px-4 py-5"
-          style={{ borderColor: "#1f2937" }}
-        >
+        <div className="rounded-2xl border border-border bg-card px-4 py-4">
           <p className="text-sm text-muted-foreground">
-            Aucun match rattaché à ton compte Discord. L’historique apparaît
-            quand le bot a enregistré le même identifiant Discord que ton
-            login.
+            Aucun match rattaché à ton Discord pour l’instant.
           </p>
           {ACCOUNT_SHOWMATCH_NICKNAME_CLAIM_ENABLED ? (
             <ShowmatchClaimForm currentNickname={showmatchNickname} />
           ) : null}
         </div>
       ) : (
-        <>
-          {showmatchNickname ? (
-            <p className="mb-3 text-xs text-muted-foreground">
-              Pseudo bot :{" "}
-              <span className="text-foreground">{showmatchNickname}</span>
-            </p>
-          ) : null}
-          <ul className="flex flex-col gap-2">
+        <div className="overflow-hidden rounded-2xl border border-border bg-card">
+          <div
+            className="hidden grid-cols-[2.75rem_minmax(0,1fr)_5.5rem_3.5rem_5rem] gap-3 border-b border-border px-4 py-2 text-[0.7rem] font-medium tracking-wide text-muted-foreground uppercase lg:grid"
+            aria-hidden
+          >
+            <span />
+            <span>Match</span>
+            <span className="text-right">KDA</span>
+            <span className="text-right">Âmes</span>
+            <span className="text-right">Résultat</span>
+          </div>
+          <ul className="divide-y divide-border">
             {entries.map((entry) => {
               const when =
                 entry.startedAt ?? entry.scheduledAt
@@ -98,102 +104,97 @@ export default function ShowmatchHistorySection({
                       (entry.startedAt ?? entry.scheduledAt) as string,
                     )
                   : null;
-              const sideColor =
-                entry.teamSide === "sapphire"
-                  ? "text-[#7ec0f0]"
-                  : entry.teamSide === "amber"
-                    ? "text-[#f0b35a]"
-                    : "text-foreground";
+              const meta = [
+                when,
+                entry.lobbyNumber != null ? `Lobby ${entry.lobbyNumber}` : null,
+                `Game ${entry.gameNumber}`,
+                entry.durationSeconds != null
+                  ? formatMatchDuration(entry.durationSeconds)
+                  : null,
+              ]
+                .filter(Boolean)
+                .join(" · ");
 
               return (
                 <li key={entry.participantId}>
                   <AppLink
                     href={`/showmatch/${entry.seriesId}`}
                     className={cn(
-                      "flex flex-col gap-2 rounded-2xl border px-4 py-3 no-underline transition-[background-color,border-color]",
-                      "hover:bg-white/3",
+                      "grid grid-cols-[2.75rem_minmax(0,1fr)_auto] items-center gap-3 px-4 py-2.5 no-underline",
+                      "lg:grid-cols-[2.75rem_minmax(0,1fr)_5.5rem_3.5rem_5rem]",
+                      "transition-colors hover:bg-muted/50",
                     )}
-                    style={{ borderColor: "#1f2937" }}
                   >
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-foreground">
-                          {entry.eventTitle ?? "Showmatch"}
-                        </p>
-                        <p className="mt-0.5 text-xs text-muted-foreground">
-                          {when ? `${when} · ` : ""}
-                          {entry.lobbyNumber != null
-                            ? `Lobby ${entry.lobbyNumber} · `
-                            : ""}
-                          Game {entry.gameNumber}
-                          {entry.durationSeconds != null
-                            ? ` · ${formatMatchDuration(entry.durationSeconds)}`
-                            : ""}
-                        </p>
-                      </div>
-                      <span
-                        className={cn(
-                          "shrink-0 rounded-md px-2 py-1 text-xs font-semibold",
-                          entry.won === true
-                            ? "text-[#6BB89A]"
-                            : entry.won === false
-                              ? "text-muted-foreground"
-                              : "text-muted-foreground",
-                        )}
-                        style={{
-                          backgroundColor:
-                            entry.won === true
-                              ? "rgba(74, 155, 127, 0.15)"
-                              : "rgba(255,255,255,0.04)",
-                        }}
-                      >
-                        {entry.won === true
-                          ? "Victoire"
-                          : entry.won === false
-                            ? "Défaite"
-                            : "—"}
-                      </span>
-                    </div>
+                    {entry.heroImageUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={entry.heroImageUrl}
+                        alt={entry.heroName ?? ""}
+                        className="size-11 rounded-md object-cover"
+                      />
+                    ) : (
+                      <div className="size-11 rounded-md bg-muted" />
+                    )}
 
-                    <div className="flex items-center gap-3">
-                      {entry.heroImageUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={entry.heroImageUrl}
-                          alt=""
-                          className="size-9 rounded-lg object-cover"
-                        />
-                      ) : (
-                        <div
-                          className="size-9 rounded-lg"
-                          style={{ backgroundColor: "rgba(255,255,255,0.06)" }}
-                        />
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm text-foreground">
-                          <span className={sideColor}>{entry.teamName}</span>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-foreground">
+                        {entry.eventTitle ?? "Showmatch"}
+                        {entry.isMvp ? (
+                          <span className="ml-1.5 text-[0.65rem] font-semibold tracking-wide text-[#e8a14a] uppercase">
+                            MVP
+                          </span>
+                        ) : null}
+                      </p>
+                      <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                        <span className={sideClass(entry.teamSide)}>
+                          {entry.teamName}
+                        </span>
+                        {" · "}
+                        {entry.heroName ?? `Héros #${entry.heroId}`}
+                        <span className="lg:hidden">
                           {" · "}
-                          {entry.heroName ?? `Héros #${entry.heroId}`}
-                          {entry.isMvp ? (
-                            <span className="ml-2 text-xs font-semibold text-[#e8a14a]">
-                              MVP
-                            </span>
-                          ) : null}
-                        </p>
-                        <p className="mt-0.5 text-xs text-muted-foreground">
                           {entry.kills}/{entry.deaths}/{entry.assists}
                           {" · "}
-                          {Math.round(entry.netWorth / 100) / 10}k âmes
+                          {formatSoulsCompact(entry.netWorth)}
+                        </span>
+                      </p>
+                      {meta ? (
+                        <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                          {meta}
                         </p>
-                      </div>
+                      ) : null}
                     </div>
+
+                    <p className="hidden text-right text-sm tabular-nums text-foreground lg:block">
+                      {entry.kills}/{entry.deaths}/{entry.assists}
+                    </p>
+                    <p className="hidden text-right text-sm tabular-nums text-muted-foreground lg:block">
+                      {formatSoulsCompact(entry.netWorth)}
+                    </p>
+
+                    <span
+                      className={cn(
+                        "justify-self-end rounded-md px-2 py-1 text-xs font-semibold",
+                        entry.won === true
+                          ? "bg-primary/15 text-primary"
+                          : entry.won === false
+                            ? "bg-destructive/10 text-destructive"
+                            : "bg-muted text-muted-foreground",
+                      )}
+                    >
+                      {entry.won === true
+                        ? "Victoire"
+                        : entry.won === false
+                          ? "Défaite"
+                          : "—"}
+                    </span>
                   </AppLink>
                 </li>
               );
             })}
           </ul>
-        </>
+        </div>
       )}
-    </div>
+    </section>
   );
 }

@@ -1,3 +1,5 @@
+import { readResponseJson } from "@/lib/http/json";
+
 import {
   STEAM_EVENT_DETAIL_API,
   STEAM_EVENTS_PAGEABLE_API,
@@ -12,7 +14,7 @@ function clanAccountIdFromSteamId(clanSteamid: string): number {
   return Number(BigInt(clanSteamid) & BigInt(0xffffffff));
 }
 
-async function fetchJson<T>(url: string, timeoutMs = 10000): Promise<T> {
+async function fetchJson<T>(url: string, timeoutMs = 30000): Promise<T> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -26,7 +28,7 @@ async function fetchJson<T>(url: string, timeoutMs = 10000): Promise<T> {
       throw new Error(`Steam Events API error: ${response.status}`);
     }
 
-    return (await response.json()) as T;
+    return await readResponseJson<T>(response);
   } finally {
     clearTimeout(timeout);
   }

@@ -6,7 +6,7 @@ import HomeLatestShowmatches from "@/components/home/HomeLatestShowmatches";
 import LandingHero from "@/components/home/LandingHero";
 import JsonLd from "@/components/seo/JsonLd";
 import { getDeadlockReferencesByLanguage } from "@/lib/deadlock/client";
-import { DEADLOCK_LANG_FRENCH } from "@/lib/deadlock/types";
+import { DEADLOCK_LANG_ENGLISH, DEADLOCK_LANG_FRENCH } from "@/lib/deadlock/types";
 import { homeJsonLd } from "@/lib/seo/json-ld";
 import { buildPageMetadata } from "@/lib/seo/metadata";
 import { SITE_DESCRIPTION, SITE_NAME } from "@/lib/seo/site";
@@ -23,9 +23,21 @@ export const metadata: Metadata = buildPageMetadata({
 
 export default async function HomePage() {
   const [articles, referencesByLanguage, events] = await Promise.all([
-    getSteamNews(1422450, 50),
-    getDeadlockReferencesByLanguage(),
-    getShowmatchEvents(),
+    getSteamNews(1422450, 50).catch((error) => {
+      console.error("Home Steam news failed:", error);
+      return [] as Awaited<ReturnType<typeof getSteamNews>>;
+    }),
+    getDeadlockReferencesByLanguage().catch((error) => {
+      console.error("Home Deadlock references failed:", error);
+      return {
+        [DEADLOCK_LANG_FRENCH]: [],
+        [DEADLOCK_LANG_ENGLISH]: [],
+      } as Awaited<ReturnType<typeof getDeadlockReferencesByLanguage>>;
+    }),
+    getShowmatchEvents().catch((error) => {
+      console.error("Home showmatch events failed:", error);
+      return [] as Awaited<ReturnType<typeof getShowmatchEvents>>;
+    }),
   ]);
 
   const latestArticles = articles.slice(0, 3);
