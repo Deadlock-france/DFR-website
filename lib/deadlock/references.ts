@@ -58,11 +58,11 @@ function heroToReference(hero: DeadlockHero): DeadlockReference {
     className: hero.class_name,
     name: hero.name,
     image:
-      hero.images.icon_image_small_webp ??
-      hero.images.icon_image_small ??
-      hero.images.icon_hero_card_webp ??
-      hero.images.icon_hero_card,
-    role: hero.description.role,
+      hero.images?.icon_image_small_webp ??
+      hero.images?.icon_image_small ??
+      hero.images?.icon_hero_card_webp ??
+      hero.images?.icon_hero_card,
+    role: hero.description?.role,
   };
 }
 

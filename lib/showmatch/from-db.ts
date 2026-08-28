@@ -1,3 +1,8 @@
+import {
+  SHOWMATCH_PUBLIC_IDENTIFIERS,
+  publicPlayerEmbedColumns,
+  toPublicShowmatchPlayerRef,
+} from "@/lib/privacy/showmatch-publication";
 import { createPublicClient } from "@/lib/supabase/public";
 import {
   getShowmatchHeroMap,
@@ -19,11 +24,11 @@ import type {
 
 type DbPlayer = {
   id: string;
-  discord_id: string | null;
-  steam_id32: string | null;
   display_name: string;
   discord_username: string;
   avatar_url: string | null;
+  discord_id?: string | null;
+  steam_id32?: string | null;
 };
 
 type DbTeamMember = {
@@ -78,13 +83,18 @@ type DbSeries = {
   id: string;
   external_id: string;
   lobby_number: number;
-  caster_discord_id: string | null;
+  caster_discord_id?: string | null;
   stream_urls: string[] | null;
   score_team1: number;
   score_team2: number;
   showmatch_series_teams: DbTeam[] | null;
   showmatch_games: DbGame[] | null;
 };
+
+const PLAYER_EMBED = publicPlayerEmbedColumns().join(",\n        ");
+const CASTER_EMBED = SHOWMATCH_PUBLIC_IDENTIFIERS.includeCasterDiscordId
+  ? "    caster_discord_id,\n"
+  : "";
 
 type DbShowmatch = {
   id: string;
@@ -109,8 +119,7 @@ const SHOWMATCH_SELECT = `
     id,
     external_id,
     lobby_number,
-    caster_discord_id,
-    stream_urls,
+${CASTER_EMBED}    stream_urls,
     score_team1,
     score_team2,
     showmatch_series_teams (
@@ -122,22 +131,12 @@ const SHOWMATCH_SELECT = `
       is_series_winner,
       captain_player_id,
       captain:players!showmatch_series_teams_captain_player_id_fkey (
-        id,
-        discord_id,
-        steam_id32,
-        display_name,
-        discord_username,
-        avatar_url
+        ${PLAYER_EMBED}
       ),
       showmatch_series_team_members (
         player_id,
         player:players!showmatch_series_team_members_player_id_fkey (
-          id,
-          discord_id,
-          steam_id32,
-          display_name,
-          discord_username,
-          avatar_url
+          ${PLAYER_EMBED}
         )
       )
     ),
@@ -154,12 +153,7 @@ const SHOWMATCH_SELECT = `
       side_mapping_source,
       mvp_rule,
       mvp:players!showmatch_games_mvp_player_id_fkey (
-        id,
-        discord_id,
-        steam_id32,
-        display_name,
-        discord_username,
-        avatar_url
+        ${PLAYER_EMBED}
       ),
       showmatch_game_participants (
         hero_id,
@@ -174,12 +168,7 @@ const SHOWMATCH_SELECT = `
         team_id,
         player_id,
         player:players!showmatch_game_participants_player_id_fkey (
-          id,
-          discord_id,
-          steam_id32,
-          display_name,
-          discord_username,
-          avatar_url
+          ${PLAYER_EMBED}
         )
       )
     )
@@ -193,23 +182,21 @@ function asOne<T>(value: T | T[] | null | undefined): T | null {
 
 function toPlayerRef(player: DbPlayer | null | undefined): ShowmatchPlayerRef {
   if (!player) {
-    return {
+    return toPublicShowmatchPlayerRef({
       id: "unknown",
-      discordId: null,
-      steamId32: null,
       displayName: "Inconnu",
       discordUsername: "Inconnu",
       avatarUrl: null,
-    };
+    });
   }
-  return {
+  return toPublicShowmatchPlayerRef({
     id: player.id,
-    discordId: player.discord_id,
-    steamId32: player.steam_id32,
     displayName: player.display_name,
     discordUsername: player.discord_username,
     avatarUrl: player.avatar_url,
-  };
+    discordId: player.discord_id,
+    steamId32: player.steam_id32,
+  });
 }
 
 function teamRoster(team: DbTeam): ShowmatchPlayerRef[] {
@@ -387,7 +374,9 @@ function mapSeries(
     id: series.id,
     externalId: series.external_id,
     lobbyNumber: series.lobby_number,
-    casterDiscordId: series.caster_discord_id,
+    ...(SHOWMATCH_PUBLIC_IDENTIFIERS.includeCasterDiscordId
+      ? { casterDiscordId: series.caster_discord_id ?? null }
+      : {}),
     streamUrls: series.stream_urls ?? [],
     scoreTeam1: series.score_team1,
     scoreTeam2: series.score_team2,
@@ -432,5 +421,7 @@ export async function fetchShowmatchEventsFromDb(): Promise<ShowmatchEventView[]
     throw new Error(`showmatch fetch failed: ${error.message}`);
   }
 
-  return ((data ?? []) as DbShowmatch[]).map((row) => mapEvent(row, heroes));
+  return ((data ?? []) as unknown as DbShowmatch[]).map((row) =>
+    mapEvent(row, heroes),
+  );
 }

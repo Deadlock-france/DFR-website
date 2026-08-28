@@ -1,5 +1,7 @@
 import { cacheLife, cacheTag } from "next/cache";
 
+import { readResponseJson } from "@/lib/http/json";
+
 import { attachReferenceUrls, getDeadlockIoSlugs } from "./deadlock-io";
 import { DEADLOCK_REFERENCE_LANGUAGE } from "./config";
 import { buildDeadlockReferenceIndex, finalizeReferenceIndex } from "./references";
@@ -18,7 +20,11 @@ export const DEADLOCK_HEROES_CACHE_TAG = "deadlock-heroes";
 export const DEADLOCK_ITEMS_CACHE_TAG = "deadlock-items";
 export const DEADLOCK_REFERENCES_CACHE_TAG = "deadlock-references";
 
-const FETCH_TIMEOUT_MS = 15_000;
+const FETCH_TIMEOUT_MS = 60_000;
+
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
 
 type DeadlockFetchOptions = {
   language?: DeadlockLanguage;
@@ -51,7 +57,12 @@ async function fetchDeadlockAssets<T>(
       throw new Error(`Deadlock API error: ${response.status} ${path}`);
     }
 
-    return (await response.json()) as T;
+    return await readResponseJson<T>(response);
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error(`Deadlock API timeout after ${FETCH_TIMEOUT_MS}ms: ${path}`);
+    }
+    throw error;
   } finally {
     clearTimeout(timeout);
   }
@@ -66,17 +77,22 @@ export async function getDeadlockHeroes(options?: {
   cacheLife({ stale: 6 * 60, revalidate: 60 * 60 * 24 });
   cacheTag(DEADLOCK_HEROES_CACHE_TAG);
 
-  const heroes = await fetchDeadlockAssets<DeadlockHero[]>("/heroes", {
-    language: options?.language,
-    searchParams:
-      options?.onlyActive === true ? { only_active: "true" } : undefined,
-  });
+  try {
+    const heroes = await fetchDeadlockAssets<DeadlockHero[]>("/heroes", {
+      language: options?.language,
+      searchParams:
+        options?.onlyActive === true ? { only_active: "true" } : undefined,
+    });
 
-  if (options?.onlyActive) {
-    return heroes.filter((hero) => hero.player_selectable && !hero.disabled);
+    if (options?.onlyActive) {
+      return heroes.filter((hero) => hero.player_selectable && !hero.disabled);
+    }
+
+    return heroes;
+  } catch (error) {
+    console.error("getDeadlockHeroes failed:", errorMessage(error));
+    return [];
   }
-
-  return heroes;
 }
 
 export async function getDeadlockHeroById(
@@ -116,7 +132,12 @@ export async function getDeadlockItems(
   cacheLife("hours");
   cacheTag(DEADLOCK_ITEMS_CACHE_TAG);
 
-  return fetchDeadlockAssets<DeadlockItem[]>("/items", { language });
+  try {
+    return await fetchDeadlockAssets<DeadlockItem[]>("/items", { language });
+  } catch (error) {
+    console.error("getDeadlockItems failed:", errorMessage(error));
+    return [];
+  }
 }
 
 export async function getDeadlockShopItems(
@@ -162,10 +183,10 @@ export async function getDeadlockHeroAbilities(
   );
 }
 
-/** Index héros + items boutique + capacités, prêt pour le survol dans les patch notes. */
-export async function getDeadlockReferences(
-  language: DeadlockLanguage = DEADLOCK_REFERENCE_LANGUAGE,
-): Promise<DeadlockReferenceIndex> {
+/** Liste sérialisable (pas de Map) pour `"use cache"`. */
+async function loadDeadlockReferenceList(
+  language: DeadlockLanguage,
+): Promise<DeadlockReference[]> {
   "use cache";
   cacheLife("hours");
   cacheTag(
@@ -174,15 +195,26 @@ export async function getDeadlockReferences(
     DEADLOCK_ITEMS_CACHE_TAG,
   );
 
-  const [heroes, items, slugs] = await Promise.all([
-    getDeadlockHeroes({ onlyActive: true, language }),
-    getDeadlockItems(language),
-    getDeadlockIoSlugs(),
-  ]);
+  try {
+    const [heroes, items, slugs] = await Promise.all([
+      getDeadlockHeroes({ onlyActive: true, language }),
+      getDeadlockItems(language),
+      getDeadlockIoSlugs(),
+    ]);
 
-  const index = buildDeadlockReferenceIndex(heroes, items);
-  const references = attachReferenceUrls(index.references, slugs, language);
+    const index = buildDeadlockReferenceIndex(heroes, items);
+    return attachReferenceUrls(index.references, slugs, language);
+  } catch (error) {
+    console.error("loadDeadlockReferenceList failed:", errorMessage(error));
+    return [];
+  }
+}
 
+/** Index héros + items boutique + capacités, prêt pour le survol dans les patch notes. */
+export async function getDeadlockReferences(
+  language: DeadlockLanguage = DEADLOCK_REFERENCE_LANGUAGE,
+): Promise<DeadlockReferenceIndex> {
+  const references = await loadDeadlockReferenceList(language);
   return finalizeReferenceIndex(references);
 }
 

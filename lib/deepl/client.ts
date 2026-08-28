@@ -1,3 +1,4 @@
+import { readResponseJson } from "@/lib/http/json";
 import { unescapeSteamBrackets } from "@/lib/steam/text";
 
 const DEEPL_FREE_API = "https://api-free.deepl.com/v2/translate";
@@ -137,7 +138,7 @@ export async function translateToFrench(
       return null;
     }
 
-    const data = (await response.json()) as DeepLTranslateResponse;
+    const data = await readResponseJson<DeepLTranslateResponse>(response);
     const translated = data.translations?.[0]?.text;
     if (!translated) return null;
 

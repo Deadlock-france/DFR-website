@@ -22,7 +22,7 @@ export default async function Image({
     title,
     eyebrow: "Showmatch",
     footer: series
-      ? `Lobby ${series.lobbyNumber} · BO3`
+      ? `Lobby ${series.lobbyNumber}`
       : "Communauté francophone",
   });
 }

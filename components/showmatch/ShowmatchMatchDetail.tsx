@@ -5,7 +5,7 @@ import type {
   ShowmatchEventView,
   ShowmatchSeriesView,
 } from "@/lib/showmatch/types";
-import { formatMatchDateTime } from "@/lib/showmatch/format";
+import { formatEventDate, formatMatchTime } from "@/lib/showmatch/format";
 
 export default function ShowmatchMatchDetail({
   series,
@@ -23,66 +23,66 @@ export default function ShowmatchMatchDetail({
   const colorB = teamB.side === "sapphire" ? "text-[#7ec0f0]" : "text-[#f0b35a]";
 
   return (
-    <article className="flex w-full flex-col gap-8 px-4 pb-20 pt-4 sm:px-5 lg:px-8">
+    <article className="flex w-full flex-col gap-8 px-4 pb-20 pt-2 sm:px-5 lg:px-8">
       <h1 className="sr-only">
         {teamA.name} vs {teamB.name} — {event.title}, lobby {series.lobbyNumber}
       </h1>
-      <nav
-        aria-label="Métadonnées du match"
-        className="flex flex-wrap items-center justify-end gap-3"
-      >
-        <p className="text-sm tabular-nums text-muted-foreground">
-          <span className="capitalize">{event.title}</span>
-          <span className="mx-2 opacity-40">·</span>
-          Lobby {series.lobbyNumber}
-          <span className="mx-2 opacity-40">·</span>
-          <time dateTime={event.scheduledAt}>
-            {formatMatchDateTime(event.scheduledAt)}
-          </time>
-        </p>
-      </nav>
-
-      <header className="border border-[#2a3538] bg-[#0c1214] px-4 py-6">
-        <p className="mb-4 text-center text-xs font-medium uppercase tracking-[0.18em] text-[#8a9b9f]">
-          Série BO3
-        </p>
-
-        <div className="relative mx-auto grid max-w-4xl grid-cols-3 items-center gap-2 sm:gap-4">
-          {/* Équipe A */}
-          <div className="flex min-w-0 flex-col items-end gap-2 pr-2 sm:pr-6">
-            <p
-              className={`font-colus text-right text-lg uppercase leading-tight tracking-wide sm:text-2xl ${colorA}`}
-            >
-              {teamA.name}
-            </p>
-            <RankBadge score={teamA.avgRank} size="md" className="text-sm" />
-          </div>
-
-          {/* Score centré */}
-          <div className="flex flex-col items-center justify-center">
-            <p className="font-colus text-4xl tabular-nums tracking-wide sm:text-5xl">
-              <span className={colorA}>{scoreA}</span>
-              <span className="mx-1.5 text-[#4a5a5e] sm:mx-2">-</span>
-              <span className={colorB}>{scoreB}</span>
-            </p>
-          </div>
-
-          {/* Équipe B */}
-          <div className="flex min-w-0 flex-col items-start gap-2 pl-2 sm:pl-6">
-            <p
-              className={`font-colus text-left text-lg uppercase leading-tight tracking-wide sm:text-2xl ${colorB}`}
-            >
-              {teamB.name}
-            </p>
-            <RankBadge score={teamB.avgRank} size="md" className="text-sm" />
-          </div>
+      <header className="border border-[#2a3538] bg-[#0c1214]">
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-[#2a3538] px-4 py-3">
+          <p className="min-w-0 text-sm text-muted-foreground">
+            <span className="text-foreground/85">
+              {formatEventDate(event.eventDate)}
+            </span>
+            <span className="mx-2 text-[#4a5a5e]" aria-hidden>
+              ·
+            </span>
+            <span>Lobby {series.lobbyNumber}</span>
+          </p>
+          <p className="shrink-0 text-xs tabular-nums text-[#8a9b9f] md:pr-5">
+            <time dateTime={event.scheduledAt}>
+              {formatMatchTime(event.scheduledAt)}
+            </time>
+          </p>
         </div>
 
-        {series.streamUrls[0] ? (
-          <div className="flex justify-center">
-            <ShowmatchStreamReplayLink href={series.streamUrls[0]} />
+        <div className="px-4 py-6">
+          <div className="relative mx-auto grid max-w-4xl grid-cols-3 items-center gap-2 sm:gap-4">
+            {/* Équipe A */}
+            <div className="flex min-w-0 flex-col items-end gap-2 pr-2 sm:pr-6">
+              <p
+                className={`font-colus text-right text-lg uppercase leading-tight tracking-wide sm:text-2xl ${colorA}`}
+              >
+                {teamA.name}
+              </p>
+              <RankBadge score={teamA.avgRank} size="md" className="text-sm" />
+            </div>
+
+            {/* Score centré */}
+            <div className="flex flex-col items-center justify-center">
+              <p className="font-colus text-4xl tabular-nums tracking-wide sm:text-5xl">
+                <span className={colorA}>{scoreA}</span>
+                <span className="mx-1.5 text-[#4a5a5e] sm:mx-2">-</span>
+                <span className={colorB}>{scoreB}</span>
+              </p>
+            </div>
+
+            {/* Équipe B */}
+            <div className="flex min-w-0 flex-col items-start gap-2 pl-2 sm:pl-6">
+              <p
+                className={`font-colus text-left text-lg uppercase leading-tight tracking-wide sm:text-2xl ${colorB}`}
+              >
+                {teamB.name}
+              </p>
+              <RankBadge score={teamB.avgRank} size="md" className="text-sm" />
+            </div>
           </div>
-        ) : null}
+
+          {series.streamUrls[0] ? (
+            <div className="flex justify-center">
+              <ShowmatchStreamReplayLink href={series.streamUrls[0]} />
+            </div>
+          ) : null}
+        </div>
       </header>
 
       {series.games.length === 0 ? (

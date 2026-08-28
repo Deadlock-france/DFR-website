@@ -143,54 +143,61 @@ function TeamBlock({
         )}
       />
 
-      <div
-        className={cn(
-          "relative z-1 flex w-full flex-wrap items-center gap-2",
-          mirror && "flex-row-reverse",
-        )}
-      >
-        <p
+      {/* Grille fixe : titre / héros / rang restent alignés même si une seule équipe a « Victoire ». */}
+      <div className="relative z-1 grid w-full grid-rows-[auto_auto_auto] gap-4">
+        <div
           className={cn(
-            "font-colus text-xl uppercase leading-none tracking-wide sm:text-2xl",
-            nameColor,
+            "flex min-h-7 w-full flex-wrap items-center gap-2",
+            mirror && "flex-row-reverse",
           )}
         >
-          {name}
-        </p>
-        {isWinner ? (
-          <span className="border border-[#d4a24a]/55 bg-[#c9a24a]/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#f6dba0]">
+          <p
+            className={cn(
+              "font-colus text-xl uppercase leading-none tracking-wide sm:text-2xl",
+              nameColor,
+            )}
+          >
+            {name}
+          </p>
+          <span
+            className={cn(
+              "border border-[#d4a24a]/55 bg-[#c9a24a]/20 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#f6dba0]",
+              !isWinner && "invisible",
+            )}
+            aria-hidden={!isWinner}
+          >
             Victoire
           </span>
-        ) : null}
-      </div>
-
-      <div className="relative z-1 w-full">
-        <HeroStrip
-          heroes={heroes}
-          side={side}
-          align={mirror ? "end" : "start"}
-        />
-      </div>
-
-      <dl
-        className={cn(
-          "relative z-1 flex w-full flex-wrap gap-x-4 gap-y-1 text-xs uppercase tracking-wide text-[#b7c4c8] sm:text-[13px]",
-          mirror && "justify-end",
-        )}
-      >
-        <div className="flex items-center gap-1.5">
-          <dt className="text-[#7f9094]">Rang</dt>
-          <dd>
-            <RankBadge
-              score={avgRank}
-              size="sm"
-              showScore
-              mirror={mirror}
-              className="normal-case tracking-normal"
-            />
-          </dd>
         </div>
-      </dl>
+
+        <div className="w-full">
+          <HeroStrip
+            heroes={heroes}
+            side={side}
+            align={mirror ? "end" : "start"}
+          />
+        </div>
+
+        <dl
+          className={cn(
+            "flex w-full flex-wrap gap-x-4 gap-y-1 text-xs uppercase tracking-wide text-[#b7c4c8] sm:text-[13px]",
+            mirror && "justify-end",
+          )}
+        >
+          <div className="flex items-center gap-1.5">
+            <dt className="text-[#7f9094]">Rang</dt>
+            <dd>
+              <RankBadge
+                score={avgRank}
+                size="sm"
+                showScore
+                mirror={mirror}
+                className="normal-case tracking-normal"
+              />
+            </dd>
+          </div>
+        </dl>
+      </div>
     </div>
   );
 }
@@ -275,10 +282,7 @@ function SeriesSummaryCard({ series }: { series: ShowmatchSeriesSummary }) {
             mirror
           />
 
-          <div className="relative flex flex-col items-center justify-center gap-1.5 border-y border-[#2a3538] bg-[linear-gradient(180deg,#141c1e,#0e1517)] px-2 py-5 sm:py-6">
-            <span className="font-colus text-sm uppercase tracking-[0.28em] text-[#6d7e82] sm:text-base">
-              BO3
-            </span>
+          <div className="relative flex flex-col items-center justify-center border-y border-[#2a3538] bg-[linear-gradient(180deg,#141c1e,#0e1517)] px-2 py-5 sm:py-6">
             <p className="font-colus text-3xl leading-none tracking-wide sm:text-4xl">
               <span
                 className={cn(

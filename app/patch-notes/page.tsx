@@ -1,8 +1,11 @@
 import NewsListFeed from "@/components/patch-notes/NewsListFeed";
 import PageHero from "@/components/patch-notes/PageHero";
 import JsonLd from "@/components/seo/JsonLd";
-import { getDeadlockReferencesByLanguage } from "@/lib/deadlock/client";
-import { DEADLOCK_LANG_FRENCH } from "@/lib/deadlock/types";
+import {
+  getDeadlockReferencesByLanguage,
+  type DeadlockReferencesByLanguage,
+} from "@/lib/deadlock/client";
+import { DEADLOCK_LANG_ENGLISH, DEADLOCK_LANG_FRENCH } from "@/lib/deadlock/types";
 import { patchNotesIndexJsonLd } from "@/lib/seo/json-ld";
 import { buildPageMetadata } from "@/lib/seo/metadata";
 import { getSteamNews } from "@/lib/steam/client";
@@ -18,10 +21,23 @@ export const metadata: Metadata = buildPageMetadata({
   path: "/patch-notes",
 });
 
+const EMPTY_REFERENCES: DeadlockReferencesByLanguage = {
+  [DEADLOCK_LANG_FRENCH]: [],
+  [DEADLOCK_LANG_ENGLISH]: [],
+};
+
 export default async function NewsPage() {
   const [articles, referencesByLanguage] = await Promise.all([
-    getSteamNews(1422450, 50),
-    getDeadlockReferencesByLanguage(),
+    getSteamNews(1422450, 50).catch((error) => {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error("Patch notes Steam news failed:", message);
+      return [] as Awaited<ReturnType<typeof getSteamNews>>;
+    }),
+    getDeadlockReferencesByLanguage().catch((error) => {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error("Patch notes Deadlock references failed:", message);
+      return EMPTY_REFERENCES;
+    }),
   ]);
 
   return (

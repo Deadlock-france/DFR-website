@@ -8,6 +8,9 @@ import {
   ACCOUNT_SHOWMATCH_NICKNAME_CLAIM_ENABLED,
 } from "@/lib/account/features";
 import { getCurrentUserId, updateDisplayName } from "@/lib/account/queries";
+import { createClient } from "@/lib/supabase/server";
+import { eraseOwnAccount } from "@/lib/account/delete-account";
+import { isAccountErasureConfirmation } from "@/lib/account/erasure-confirmation";
 import { claimShowmatchPlayerByNickname } from "@/lib/account/showmatch-claim";
 
 export async function updateDisplayNameAction(formData: FormData) {
@@ -64,4 +67,35 @@ export async function claimShowmatchNicknameAction(formData: FormData) {
       `/profil?claim_error=${encodeURIComponent(known.has(code) ? code : "claim_failed")}`,
     );
   }
+}
+
+export async function deleteOwnAccountAction(formData: FormData) {
+  const userId = await getCurrentUserId();
+  if (!userId) {
+    redirect("/auth/login?next=/profil");
+  }
+
+  if (!isAccountErasureConfirmation(String(formData.get("confirmation") ?? ""))) {
+    redirect("/profil?error=delete_account");
+  }
+
+  try {
+    await eraseOwnAccount(userId);
+  } catch (error) {
+    unstable_rethrow(error);
+    console.error("Account erasure failed:", error);
+    redirect("/profil?error=delete_account");
+  }
+
+  try {
+    const supabase = await createClient();
+    await supabase.auth.signOut();
+  } catch (error) {
+    console.error("Sign-out after account erasure failed:", error);
+  }
+
+  revalidatePath("/");
+  revalidatePath("/showmatch");
+  revalidatePath("/profil");
+  redirect("/?account_deleted=1");
 }

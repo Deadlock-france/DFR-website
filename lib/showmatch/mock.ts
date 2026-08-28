@@ -1,3 +1,7 @@
+import {
+  SHOWMATCH_PUBLIC_IDENTIFIERS,
+  toPublicShowmatchPlayerRef,
+} from "@/lib/privacy/showmatch-publication";
 import type {
   ShowmatchEventView,
   ShowmatchGameView,
@@ -121,14 +125,14 @@ function player(
   discordId: string,
   displayName: string,
 ): ShowmatchPlayerRef {
-  return {
+  return toPublicShowmatchPlayerRef({
     id: `player_${discordId}`,
-    discordId,
-    steamId32: null,
     displayName,
     discordUsername: displayName,
     avatarUrl: null,
-  };
+    discordId,
+    steamId32: null,
+  });
 }
 
 function participant(
@@ -244,7 +248,7 @@ function series(input: {
   id: string;
   externalId: string;
   lobbyNumber: number;
-  casterDiscordId: string | null;
+  casterDiscordId?: string | null;
   streamUrls: string[];
   scoreTeam1: number;
   scoreTeam2: number;
@@ -254,9 +258,13 @@ function series(input: {
   if (!preview) {
     throw new Error(`Series ${input.id} requires at least one game`);
   }
+  const { casterDiscordId, ...rest } = input;
   return {
-    ...input,
-    teams: seriesRoster(preview, input.scoreTeam1, input.scoreTeam2),
+    ...rest,
+    ...(SHOWMATCH_PUBLIC_IDENTIFIERS.includeCasterDiscordId
+      ? { casterDiscordId: casterDiscordId ?? null }
+      : {}),
+    teams: seriesRoster(preview, rest.scoreTeam1, rest.scoreTeam2),
   };
 }
 

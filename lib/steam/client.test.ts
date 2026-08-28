@@ -66,7 +66,12 @@ function stubNetwork(scenario: FetchScenario) {
   fetchMock.mockImplementation(async (input: string, init?: RequestInit) => {
     const url = String(input);
     const json = (body: unknown, ok = true, status = 200) =>
-      ({ ok, status, json: async () => body }) as Response;
+      ({
+        ok,
+        status,
+        json: async () => body,
+        text: async () => JSON.stringify(body),
+      }) as Response;
 
     if (url.includes("ISteamNews")) {
       return json(
@@ -235,10 +240,10 @@ describe("getSteamNews", () => {
       await expect(getSteamNews()).resolves.toEqual([]);
     });
 
-    it("remonte une erreur quand l'API Steam échoue", async () => {
+    it("dégrade en liste vide quand l'API Steam échoue", async () => {
       stubNetwork({ newsOk: false, newsStatus: 502 });
 
-      await expect(getSteamNews()).rejects.toThrow("Steam API error: 502");
+      await expect(getSteamNews()).resolves.toEqual([]);
     });
   });
 

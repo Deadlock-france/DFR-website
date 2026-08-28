@@ -10,7 +10,7 @@ import SiteAnnouncementBanner from "@/components/home/SiteAnnouncementBanner";
 import JsonLd from "@/components/seo/JsonLd";
 import { listActiveAnnouncements, listPublishedNews } from "@/lib/admin/cms";
 import { getDeadlockReferencesByLanguage } from "@/lib/deadlock/client";
-import { DEADLOCK_LANG_FRENCH } from "@/lib/deadlock/types";
+import { DEADLOCK_LANG_ENGLISH, DEADLOCK_LANG_FRENCH } from "@/lib/deadlock/types";
 import { homeJsonLd } from "@/lib/seo/json-ld";
 import { buildPageMetadata } from "@/lib/seo/metadata";
 import { SITE_DESCRIPTION, SITE_NAME } from "@/lib/seo/site";
@@ -32,9 +32,21 @@ async function HomeAnnouncementBanner() {
 
 async function HomeMainFeed() {
   const [articles, referencesByLanguage, events, siteNews] = await Promise.all([
-    getSteamNews(1422450, 50),
-    getDeadlockReferencesByLanguage(),
-    getShowmatchEvents(),
+    getSteamNews(1422450, 50).catch((error) => {
+      console.error("Home Steam news failed:", error);
+      return [] as Awaited<ReturnType<typeof getSteamNews>>;
+    }),
+    getDeadlockReferencesByLanguage().catch((error) => {
+      console.error("Home Deadlock references failed:", error);
+      return {
+        [DEADLOCK_LANG_FRENCH]: [],
+        [DEADLOCK_LANG_ENGLISH]: [],
+      } as Awaited<ReturnType<typeof getDeadlockReferencesByLanguage>>;
+    }),
+    getShowmatchEvents().catch((error) => {
+      console.error("Home showmatch events failed:", error);
+      return [] as Awaited<ReturnType<typeof getShowmatchEvents>>;
+    }),
     listPublishedNews(3).catch(() => []),
   ]);
 
