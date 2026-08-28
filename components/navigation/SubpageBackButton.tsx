@@ -11,6 +11,7 @@ const TOP_LEVEL_PATHS = new Set(["/", "/patch-notes", "/profil", "/showmatch"]);
 
 function fallbackHref(pathname: string): string {
   if (pathname.startsWith("/patch-notes/")) return "/patch-notes";
+  if (pathname.startsWith("/showmatch/")) return "/showmatch";
   if (pathname.startsWith("/equipes")) return "/profil";
   if (pathname === "/amis" || pathname === "/profil") return "/";
   return "/";
