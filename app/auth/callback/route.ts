@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+import { maybeAttachSiteAccessForUser } from "@/lib/admin/admins";
 import { safeInternalPath } from "@/lib/navigation/safe-path";
 import { getSupabaseAnonKey, getSupabaseUrl } from "@/lib/supabase/env";
 
@@ -58,6 +59,19 @@ export async function GET(request: NextRequest) {
       "Discord profile sync / showmatch claim after login failed:",
       claimError,
     );
+  }
+
+  try {
+    const { data: userData } = await supabase.auth.getUser();
+    const user = userData.user;
+    if (user) {
+      await maybeAttachSiteAccessForUser(response, {
+        userId: user.id,
+        identities: user.identities,
+      });
+    }
+  } catch (accessError) {
+    console.error("Admin site-access cookie after login failed:", accessError);
   }
 
   return response;

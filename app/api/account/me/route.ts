@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { unstable_rethrow } from "next/navigation";
 
+import { getAdminIdentity } from "@/lib/admin/access";
 import { getCurrentUserId } from "@/lib/account/queries";
 import type { AccountDockUser } from "@/lib/account/types";
 import { profileDisplayName } from "@/lib/account/types";
@@ -14,11 +15,14 @@ export async function GET() {
     }
 
     const supabase = await createReadonlyClient();
-    const { data: profile, error } = await supabase
-      .from("profiles")
-      .select("id, display_name, global_name, username, avatar_url")
-      .eq("id", userId)
-      .maybeSingle();
+    const [{ data: profile, error }, adminIdentity] = await Promise.all([
+      supabase
+        .from("profiles")
+        .select("id, display_name, global_name, username, avatar_url")
+        .eq("id", userId)
+        .maybeSingle(),
+      getAdminIdentity().catch(() => null),
+    ]);
 
     if (error) throw error;
 
@@ -32,6 +36,7 @@ export async function GET() {
           })
         : "Joueur",
       avatarUrl: profile?.avatar_url ?? null,
+      isAdmin: adminIdentity != null,
       teams: [],
       friends: [],
       pendingInvites: [],

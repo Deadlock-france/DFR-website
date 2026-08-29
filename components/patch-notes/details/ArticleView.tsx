@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react";
 
-import AppLink from "@/components/AppLink";
 import { formatNewsDate, formatPatchNotesContent } from "@/hooks/news/format";
 import { DEADLOCK_REFERENCE_LANGUAGE } from "@/lib/deadlock/config";
 import type { DeadlockReferencesByLanguage } from "@/lib/deadlock/client";
@@ -56,33 +55,6 @@ export default function ArticleView({
 
   return (
     <article className="mt-4 flex flex-col gap-6 p-4 sm:p-5">
-      <nav aria-label="Fil d'Ariane" className="text-sm">
-        <ol className="flex items-center gap-2">
-          <li>
-            <AppLink href="/" className="text-muted-foreground hover:text-foreground">
-              Accueil
-            </AppLink>
-          </li>
-          <li aria-hidden className="text-muted-foreground">
-            /
-          </li>
-          <li>
-            <AppLink
-              href="/patch-notes"
-              className="text-muted-foreground hover:text-foreground"
-            >
-              Patch notes
-            </AppLink>
-          </li>
-          <li aria-hidden className="text-muted-foreground">
-            /
-          </li>
-          <li className="max-w-300px truncate text-foreground" aria-current="page">
-            {display.title}
-          </li>
-        </ol>
-      </nav>
-
       <div className="flex flex-col gap-4">
         <header className="flex flex-col gap-2">
           <time

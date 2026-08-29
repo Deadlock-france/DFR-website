@@ -1,4 +1,5 @@
 import { createHash, createHmac, timingSafeEqual } from "crypto";
+import type { NextResponse } from "next/server";
 
 export const SITE_ACCESS_COOKIE = "dfr_site_access";
 
@@ -55,6 +56,22 @@ export function isSiteAccessPublicPath(pathname: string): boolean {
   return (
     pathname === "/acces" ||
     pathname === "/api/site-access" ||
-    pathname === "/api/showmatch/ingest"
+    pathname === "/api/showmatch/ingest" ||
+    pathname === "/api/auth/session" ||
+    pathname.startsWith("/auth/")
   );
+}
+
+/** Pose le cookie d’accès site (admins Discord ou mot de passe). */
+export function attachSiteAccessCookie(response: NextResponse): void {
+  if (!isSiteAccessEnabled()) return;
+  response.cookies.set({
+    name: SITE_ACCESS_COOKIE,
+    value: createSiteAccessToken(),
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: SITE_ACCESS_MAX_AGE_SECONDS,
+  });
 }

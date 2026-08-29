@@ -7,10 +7,18 @@ import { Suspense } from "react";
 import { Button } from "@/components/shadcn/button";
 
 /** Pages top-level (sidebar) : pas de bouton retour. */
-const TOP_LEVEL_PATHS = new Set(["/", "/patch-notes", "/profil", "/showmatch"]);
+const TOP_LEVEL_PATHS = new Set([
+  "/",
+  "/patch-notes",
+  "/profil",
+  "/showmatch",
+  "/news",
+  "/candidatures",
+]);
 
 function fallbackHref(pathname: string): string {
   if (pathname.startsWith("/patch-notes/")) return "/patch-notes";
+  if (pathname.startsWith("/news/")) return "/news";
   if (pathname.startsWith("/showmatch/")) return "/showmatch";
   if (pathname.startsWith("/equipes")) return "/profil";
   if (pathname === "/amis" || pathname === "/profil") return "/";

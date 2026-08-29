@@ -44,6 +44,9 @@ describe("site-access", () => {
     expect(isSiteAccessPublicPath("/acces")).toBe(true);
     expect(isSiteAccessPublicPath("/api/site-access")).toBe(true);
     expect(isSiteAccessPublicPath("/api/showmatch/ingest")).toBe(true);
+    expect(isSiteAccessPublicPath("/auth/login")).toBe(true);
+    expect(isSiteAccessPublicPath("/auth/callback")).toBe(true);
+    expect(isSiteAccessPublicPath("/api/auth/session")).toBe(true);
     expect(isSiteAccessPublicPath("/")).toBe(false);
     expect(isSiteAccessPublicPath("/profil")).toBe(false);
   });
