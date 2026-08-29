@@ -1,10 +1,12 @@
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 import { createClient, createReadonlyClient } from "@/lib/supabase/server";
-import type {
-  ApplicationStatus,
-  ApplicationType,
-  SiteApplication,
-  SiteApplicationAdminRow,
+import {
+  APPLICATION_QUOTA_LIMIT,
+  applicationQuotaWindowStart,
+  type ApplicationStatus,
+  type ApplicationType,
+  type SiteApplication,
+  type SiteApplicationAdminRow,
 } from "@/lib/admin/application-types";
 
 function applicantLabel(row: {
@@ -40,6 +42,17 @@ export async function insertMyApplication(input: {
   body: string;
 }): Promise<SiteApplication> {
   const supabase = await createClient();
+
+  const { count, error: quotaError } = await supabase
+    .from("site_applications")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", input.userId)
+    .gte("created_at", applicationQuotaWindowStart(new Date()));
+  if (quotaError) throw quotaError;
+  if ((count ?? 0) >= APPLICATION_QUOTA_LIMIT) {
+    throw new Error("quota_exceeded");
+  }
+
   const { data, error } = await supabase
     .from("site_applications")
     .insert({
@@ -56,6 +69,9 @@ export async function insertMyApplication(input: {
   if (error) {
     if (error.code === "23505") {
       throw new Error("pending_exists");
+    }
+    if (error.message.includes("application_quota_exceeded")) {
+      throw new Error("quota_exceeded");
     }
     throw error;
   }

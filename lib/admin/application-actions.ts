@@ -43,8 +43,8 @@ export async function submitApplicationAction(formData: FormData) {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : "save_failed";
-    if (message === "pending_exists") {
-      redirect("/candidatures?error=pending_exists");
+    if (message === "pending_exists" || message === "quota_exceeded") {
+      redirect(`/candidatures?error=${message}`);
     }
     redirect("/candidatures?error=save_failed");
   }

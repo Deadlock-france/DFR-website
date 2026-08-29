@@ -7,6 +7,7 @@ import PageHero from "@/components/patch-notes/PageHero";
 import { getCurrentUserId } from "@/lib/account/queries";
 import { listMyApplications } from "@/lib/admin/applications";
 import {
+  applicationQuota,
   applicationStatusLabel,
   applicationTypeLabel,
   type ApplicationType,
@@ -51,6 +52,10 @@ async function CandidaturesBody() {
   const blockedTypes = rows
     .filter((row) => row.status === "pending")
     .map((row) => row.type) as ApplicationType[];
+  const quota = applicationQuota(
+    rows.map((row) => row.created_at),
+    new Date(),
+  );
 
   return (
     <div className="flex w-full flex-col gap-10 px-4 pb-20 pt-2 sm:px-5 lg:px-8">
@@ -59,10 +64,15 @@ async function CandidaturesBody() {
           Nouvelle candidature
         </h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          Staff, partenaire ou autre. Une candidature en attente max par type.
+          Staff, partenaire ou autre. Une candidature en attente max par type,
+          et {quota.limit} envois maximum par période de 30 jours.
         </p>
         <div className="mt-4">
-          <ApplicationForm blockedTypes={blockedTypes} />
+          <ApplicationForm
+            blockedTypes={blockedTypes}
+            quota={quota}
+            resetLabel={quota.resetAt ? formatDt(quota.resetAt) : null}
+          />
         </div>
       </section>
 

@@ -6,6 +6,7 @@ import { submitApplicationAction } from "@/lib/admin/application-actions";
 import {
   APPLICATION_TYPES,
   applicationTypeLabel,
+  type ApplicationQuota,
   type ApplicationType,
 } from "@/lib/admin/application-types";
 
@@ -14,13 +15,18 @@ const ERROR_MESSAGES: Record<string, string> = {
   invalid_subject: "Objet : entre 3 et 120 caractères.",
   invalid_body: "Message : entre 20 et 8000 caractères.",
   pending_exists: "Tu as déjà une candidature en attente pour ce type.",
+  quota_exceeded: "Limite atteinte : 3 candidatures par période de 30 jours.",
   save_failed: "Envoi impossible. Réessaie plus tard.",
 };
 
 export default function ApplicationForm({
   blockedTypes,
+  quota,
+  resetLabel,
 }: {
   blockedTypes: ApplicationType[];
+  quota: ApplicationQuota;
+  resetLabel: string | null;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState(false);
@@ -32,6 +38,16 @@ export default function ApplicationForm({
     if (err) setError(ERROR_MESSAGES[err] ?? "Envoi impossible.");
     if (params.get("ok") === "1") setOk(true);
   }, []);
+
+  if (quota.remaining === 0) {
+    return (
+      <p className="border border-[#e07070]/40 bg-[#e07070]/10 px-3 py-2 text-sm text-[#e07070]">
+        Tu as envoyé {quota.used} candidatures sur les 30 derniers jours, c’est
+        la limite.
+        {resetLabel ? ` Tu pourras à nouveau postuler le ${resetLabel}.` : ""}
+      </p>
+    );
+  }
 
   if (available.length === 0) {
     return (
@@ -95,12 +111,19 @@ export default function ApplicationForm({
         />
       </label>
 
-      <button
-        type="submit"
-        className="cursor-pointer self-start bg-[#4A9B7F] px-4 py-2 text-sm font-semibold text-white transition-[filter] hover:brightness-110"
-      >
-        Envoyer
-      </button>
+      <div className="flex flex-wrap items-center gap-3">
+        <button
+          type="submit"
+          className="cursor-pointer self-start bg-[#4A9B7F] px-4 py-2 text-sm font-semibold text-white transition-[filter] hover:brightness-110"
+        >
+          Envoyer
+        </button>
+        <p className="text-xs text-muted-foreground">
+          Il te reste {quota.remaining} candidature
+          {quota.remaining === 1 ? "" : "s"} sur {quota.limit} pour cette période
+          de 30 jours.
+        </p>
+      </div>
     </form>
   );
 }

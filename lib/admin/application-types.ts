@@ -29,6 +29,50 @@ export type SiteApplicationAdminRow = SiteApplication & {
   applicant_label: string | null;
 };
 
+/** Anti-spam : 3 candidatures par personne sur une fenêtre glissante de 30 jours. */
+export const APPLICATION_QUOTA_LIMIT = 3;
+export const APPLICATION_QUOTA_WINDOW_DAYS = 30;
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+export type ApplicationQuota = {
+  limit: number;
+  used: number;
+  remaining: number;
+  /** Date à laquelle un créneau se libère, null tant qu’il en reste un. */
+  resetAt: string | null;
+};
+
+export function applicationQuotaWindowStart(now: Date): string {
+  return new Date(
+    now.getTime() - APPLICATION_QUOTA_WINDOW_DAYS * DAY_MS,
+  ).toISOString();
+}
+
+export function applicationQuota(
+  createdAt: readonly string[],
+  now: Date,
+): ApplicationQuota {
+  const floor = now.getTime() - APPLICATION_QUOTA_WINDOW_DAYS * DAY_MS;
+  const recent = createdAt
+    .map((iso) => new Date(iso).getTime())
+    .filter((time) => Number.isFinite(time) && time > floor)
+    .sort((a, b) => a - b);
+
+  const remaining = Math.max(0, APPLICATION_QUOTA_LIMIT - recent.length);
+  const oldest = recent[0];
+
+  return {
+    limit: APPLICATION_QUOTA_LIMIT,
+    used: recent.length,
+    remaining,
+    resetAt:
+      remaining === 0 && oldest !== undefined
+        ? new Date(oldest + APPLICATION_QUOTA_WINDOW_DAYS * DAY_MS).toISOString()
+        : null,
+  };
+}
+
 export function isApplicationType(value: string): value is ApplicationType {
   return (APPLICATION_TYPES as readonly string[]).includes(value);
 }
