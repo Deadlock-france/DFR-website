@@ -55,7 +55,7 @@ async function HomeMainFeed() {
 
   return (
     <div className="flex flex-col gap-16 sm:gap-20">
-      <HomeSiteNews items={siteNews} />
+     {/* <HomeSiteNews items={siteNews} /> */}
       <HomeLatestNews
         items={latestArticles}
         references={referencesByLanguage[DEADLOCK_LANG_FRENCH]}

@@ -16,7 +16,7 @@ import AdminStatCard from "@/components/admin/AdminStatCard";
 import AdminTopHeroes from "@/components/admin/AdminTopHeroes";
 import { adminPanelClassName } from "@/components/admin/admin-styles";
 import {
-  SIGNUP_CHART_WEEKS,
+  DEFAULT_SIGNUP_RANGE,
   formatCount,
   formatDurationLabel,
   loadSiteStats,
@@ -67,10 +67,6 @@ async function StatsContent() {
     );
   }
 
-  const signupsOnChart = stats.signupsByWeek.reduce(
-    (total, bucket) => total + bucket.count,
-    0,
-  );
   const generatedAt = new Intl.DateTimeFormat("fr-FR", {
     dateStyle: "long",
     timeStyle: "short",
@@ -91,13 +87,11 @@ async function StatsContent() {
           label="Showmatchs"
           icon={Trophy}
           value={formatCount(stats.showmatches.total)}
-          hint={`${stats.showmatches.completed} terminé${stats.showmatches.completed === 1 ? "" : "s"} · ${stats.showmatches.series} lobby${stats.showmatches.series === 1 ? "" : "s"}`}
         />
         <AdminStatCard
           label="Matchs joués"
           icon={Gamepad2}
           value={formatCount(stats.gameplay.games)}
-          hint={`${formatCount(stats.gameplay.participations)} participations enregistrées`}
         />
         <AdminStatCard
           label="Joueurs référencés"
@@ -109,17 +103,7 @@ async function StatsContent() {
 
       <section className={cn(adminPanelClassName, "p-4 sm:p-5")}>
         <div className="flex flex-wrap items-end justify-between gap-3">
-          <div>
-            <h2 className="text-sm font-medium text-foreground">
-              Inscriptions
-            </h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {SIGNUP_CHART_WEEKS} dernières semaines ·{" "}
-              {formatCount(signupsOnChart)} nouveau
-              {signupsOnChart === 1 ? "" : "x"} compte
-              {signupsOnChart === 1 ? "" : "s"}
-            </p>
-          </div>
+          <h2 className="text-sm font-medium text-foreground">Inscriptions</h2>
           {stats.members.trend !== null ? (
             <p className="text-sm text-muted-foreground">
               30 j : {stats.members.last30d} vs {stats.members.previous30d} sur
@@ -127,7 +111,10 @@ async function StatsContent() {
             </p>
           ) : null}
         </div>
-        <AdminSignupsChart buckets={stats.signupsByWeek} />
+        <AdminSignupsChart
+          ranges={stats.signupRanges}
+          defaultRangeId={DEFAULT_SIGNUP_RANGE}
+        />
       </section>
 
       <div className="grid gap-4 lg:grid-cols-3">

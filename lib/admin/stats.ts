@@ -2,14 +2,30 @@ import { connection } from "next/server";
 
 import { createServiceRoleClient } from "@/lib/supabase/admin";
 
-/** Fenêtre du graphe d’inscriptions (semaines glissantes). */
-export const SIGNUP_CHART_WEEKS = 12;
-
 const DAY_MS = 24 * 60 * 60 * 1000;
 const WEEK_MS = 7 * DAY_MS;
 
+/** Périodes proposées sous le graphe d’inscriptions. */
+export const SIGNUP_RANGE_OPTIONS = [
+  { id: "4w", label: "4 semaines", weeks: 4 },
+  { id: "12w", label: "3 mois", weeks: 12 },
+  { id: "26w", label: "6 mois", weeks: 26 },
+  { id: "52w", label: "1 an", weeks: 52 },
+] as const;
+
+export type SignupRangeId = (typeof SIGNUP_RANGE_OPTIONS)[number]["id"];
+
+export const DEFAULT_SIGNUP_RANGE: SignupRangeId = "12w";
+
+const MAX_SIGNUP_WEEKS = Math.max(
+  ...SIGNUP_RANGE_OPTIONS.map((option) => option.weeks),
+);
+
+/** Nombre de héros visibles avant de déplier. */
+export const TOP_HEROES_PREVIEW = 6;
+
 /** Garde-fous : le dashboard agrège en mémoire, jamais toute la table. */
-const MAX_SIGNUP_ROWS = 5000;
+const MAX_SIGNUP_ROWS = 20000;
 const MAX_GAME_ROWS = 5000;
 const MAX_PARTICIPANT_ROWS = 20000;
 
@@ -18,6 +34,16 @@ export type WeeklyBucket = {
   start: string;
   label: string;
   count: number;
+};
+
+export type SignupRange = {
+  id: SignupRangeId;
+  label: string;
+  weeks: number;
+  buckets: WeeklyBucket[];
+  total: number;
+  /** Semaine la plus forte : sert d’échelle au graphe. */
+  peak: number;
 };
 
 export type HeroPick = {
@@ -35,7 +61,7 @@ export type SiteStats = {
     /** Variation 30 j vs 30 j précédents, null si base nulle. */
     trend: number | null;
   };
-  signupsByWeek: WeeklyBucket[];
+  signupRanges: SignupRange[];
   teams: number;
   applications: number;
   players: {
@@ -44,13 +70,10 @@ export type SiteStats = {
   };
   showmatches: {
     total: number;
-    completed: number;
     upcoming: number;
-    series: number;
   };
   gameplay: {
     games: number;
-    participations: number;
     playtimeSeconds: number;
     averageDurationSeconds: number;
     kills: number;
@@ -74,7 +97,7 @@ function shortDayLabel(time: number): string {
 export function weeklyBuckets(
   isoDates: readonly string[],
   now: Date,
-  weeks: number = SIGNUP_CHART_WEEKS,
+  weeks: number,
 ): WeeklyBucket[] {
   const end = now.getTime();
   const buckets: WeeklyBucket[] = [];
@@ -95,6 +118,24 @@ export function weeklyBuckets(
     if (bucket) bucket.count += 1;
   }
   return buckets;
+}
+
+/** Une série par période proposée, pour basculer sans nouvel aller-retour. */
+export function buildSignupRanges(
+  isoDates: readonly string[],
+  now: Date,
+): SignupRange[] {
+  return SIGNUP_RANGE_OPTIONS.map((option) => {
+    const buckets = weeklyBuckets(isoDates, now, option.weeks);
+    return {
+      id: option.id,
+      label: option.label,
+      weeks: option.weeks,
+      buckets,
+      total: buckets.reduce((sum, bucket) => sum + bucket.count, 0),
+      peak: buckets.reduce((max, bucket) => Math.max(max, bucket.count), 0),
+    };
+  });
 }
 
 /** Nombre de dates dans les `days` derniers jours (fenêtre glissante). */
@@ -141,19 +182,23 @@ export function trendPercent(
   return Math.round(((current - previous) / previous) * 100);
 }
 
+/**
+ * Classement des héros joués. Sans `limit`, renvoie tout le classement :
+ * il reste borné par le roster Deadlock.
+ */
 export function topHeroPicks(
   heroIds: readonly number[],
-  limit: number,
+  limit?: number,
 ): HeroPick[] {
   const counts = new Map<number, number>();
   for (const heroId of heroIds) {
     if (!Number.isInteger(heroId)) continue;
     counts.set(heroId, (counts.get(heroId) ?? 0) + 1);
   }
-  return [...counts.entries()]
+  const ranked = [...counts.entries()]
     .map(([heroId, picks]) => ({ heroId, picks }))
-    .sort((a, b) => b.picks - a.picks || a.heroId - b.heroId)
-    .slice(0, limit);
+    .sort((a, b) => b.picks - a.picks || a.heroId - b.heroId);
+  return limit === undefined ? ranked : ranked.slice(0, limit);
 }
 
 /** Durée lisible : « 12 h 30 » pour un cumul, « 32 min » en dessous d’une heure. */
@@ -194,7 +239,7 @@ export async function loadSiteStats(): Promise<SiteStats> {
   const now = new Date();
   const nowIso = now.toISOString();
   const windowStart = new Date(
-    now.getTime() - SIGNUP_CHART_WEEKS * WEEK_MS,
+    now.getTime() - MAX_SIGNUP_WEEKS * WEEK_MS,
   ).toISOString();
 
   const [
@@ -205,11 +250,8 @@ export async function loadSiteStats(): Promise<SiteStats> {
     playersTotal,
     playersClaimed,
     showmatchesTotal,
-    showmatchesCompleted,
     showmatchesUpcoming,
-    seriesTotal,
     gameRows,
-    participantsTotal,
     heroRows,
   ] = await Promise.all([
     supabase
@@ -246,26 +288,13 @@ export async function loadSiteStats(): Promise<SiteStats> {
     supabase
       .from("showmatches")
       .select("id", { count: "exact", head: true })
-      .eq("status", "completed")
-      .then(unwrapCount),
-    supabase
-      .from("showmatches")
-      .select("id", { count: "exact", head: true })
       .gt("scheduled_at", nowIso)
       .neq("status", "completed")
-      .then(unwrapCount),
-    supabase
-      .from("showmatch_series")
-      .select("id", { count: "exact", head: true })
       .then(unwrapCount),
     supabase
       .from("showmatch_games")
       .select("duration_seconds, total_kills, total_souls")
       .limit(MAX_GAME_ROWS),
-    supabase
-      .from("showmatch_game_participants")
-      .select("id", { count: "exact", head: true })
-      .then(unwrapCount),
     supabase
       .from("showmatch_game_participants")
       .select("hero_id")
@@ -304,25 +333,22 @@ export async function loadSiteStats(): Promise<SiteStats> {
       previous30d,
       trend: trendPercent(last30d, previous30d),
     },
-    signupsByWeek: weeklyBuckets(signupDates, now),
+    signupRanges: buildSignupRanges(signupDates, now),
     teams: teamsTotal,
     applications: applicationsTotal,
     players: { total: playersTotal, claimed: playersClaimed },
     showmatches: {
       total: showmatchesTotal,
-      completed: showmatchesCompleted,
       upcoming: showmatchesUpcoming,
-      series: seriesTotal,
     },
     gameplay: {
       games: games.length,
-      participations: participantsTotal,
       playtimeSeconds,
       averageDurationSeconds:
         timedGames > 0 ? Math.round(playtimeSeconds / timedGames) : 0,
       kills: sumBy(games, (row) => row.total_kills),
       souls: sumBy(games, (row) => row.total_souls),
     },
-    topHeroes: topHeroPicks(heroIds, 6),
+    topHeroes: topHeroPicks(heroIds),
   };
 }

@@ -44,7 +44,7 @@ function MiniStat({
   icon: LucideIcon;
   label: string;
   value: string;
-  hint: string;
+  hint?: string;
 }) {
   return (
     <div className={cn(adminPanelClassName, "p-4")}>
@@ -57,7 +57,9 @@ function MiniStat({
       <p className="font-colus mt-2 text-3xl tracking-[-0.03em] tabular-nums text-foreground">
         {value}
       </p>
-      <p className="mt-0.5 truncate text-xs text-muted-foreground">{hint}</p>
+      {hint ? (
+        <p className="mt-0.5 truncate text-xs text-muted-foreground">{hint}</p>
+      ) : null}
     </div>
   );
 }
@@ -150,7 +152,6 @@ export default async function AdminDashboardPage() {
               icon={Gamepad2}
               label="Matchs joués"
               value={formatCount(stats.gameplay.games)}
-              hint={`${formatCount(stats.gameplay.participations)} participations`}
             />
             <MiniStat
               icon={UserPlus}
